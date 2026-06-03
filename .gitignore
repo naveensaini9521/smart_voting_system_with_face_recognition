@@ -5,5 +5,7 @@ __pycache__/
 
 docker-desktop-amd64.deb
 
+shape_predictor_68_face_landmarks.dat
+
 *.log
 .env
