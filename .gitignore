@@ -1,0 +1,9 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+docker-desktop-amd64.deb
+
+*.log
+.env
