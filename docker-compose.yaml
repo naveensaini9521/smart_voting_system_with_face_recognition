@@ -1,7 +1,7 @@
-version: "3.9"
 
 services:
   frontend:
+    platform: linux/arm64
     build:
       context: ./smart_app/frontend
       dockerfile: Dockerfile
@@ -15,6 +15,7 @@ services:
       - voting-network
 
   backend:
+    platform: linux/arm64
     build:
       context: ./smart_app/backend
       dockerfile: Dockerfile
@@ -33,6 +34,7 @@ services:
       - voting-network
 
   mongo:
+    platform: linux/arm64
     image: mongo:7
     container_name: voting-system-mongo
     ports:
