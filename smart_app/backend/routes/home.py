@@ -4,8 +4,8 @@ from datetime import datetime
 from bson import ObjectId
 import random
 
-from smart_app.backend.extensions import mongo
-from smart_app.backend.mongo_models import User, Election, Vote, Voter, SystemStats
+from extensions import mongo
+from mongo_models import User, Election, Vote, Voter, SystemStats
 
 home_bp = Blueprint('home', __name__)
 

@@ -15,15 +15,15 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-from smart_app.backend.mongo_models import Admin, AuditLog, Voter, OTP, FaceEncoding, IDDocument, calculate_age
-from smart_app.backend.routes.auth import verify_token
-from smart_app.backend.services.face_recognition_service import (
+from mongo_models import Admin, AuditLog, Voter, OTP, FaceEncoding, IDDocument, calculate_age
+from routes.auth import verify_token
+from services.face_recognition_service import (
     hybrid_face_service, 
     multi_face_service,
     knn_face_service,
     FaceRecognitionResult
 )
-from smart_app.backend.services.face_utils import face_utils
+from services.face_utils import face_utils
 
 logger = logging.getLogger(__name__)
 

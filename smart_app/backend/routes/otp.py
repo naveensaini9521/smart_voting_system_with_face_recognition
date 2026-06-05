@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
-from smart_app.backend.extensions import mongo
-from smart_app.backend.mongo_models import OTP
+from extensions import mongo
+from mongo_models import OTP
 import random
 from datetime import datetime, timedelta
 

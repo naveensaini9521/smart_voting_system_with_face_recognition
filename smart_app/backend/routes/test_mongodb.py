@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify
-from smart_app.backend.extensions import mongo
+from extensions import mongo
 from flask import current_app
 from bson import ObjectId
 from datetime import datetime

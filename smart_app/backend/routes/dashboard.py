@@ -12,13 +12,13 @@ import json
 import hashlib
 from functools import wraps
 import base64
-from smart_app.backend.extensions import socketio
+from extensions import socketio
 from flask_socketio import emit, join_room
-from smart_app.backend.socket_events import safe_emit, connected_clients
+from socket_events import safe_emit, connected_clients
 
 # Import from your project structure
-from smart_app.backend.mongo_models import Voter, Election, Vote, Candidate, AuditLog, OTP, FaceEncoding, Admin
-from smart_app.backend.extensions import mongo
+from mongo_models import Voter, Election, Vote, Candidate, AuditLog, OTP, FaceEncoding, Admin
+from extensions import mongo
 from flask_cors import cross_origin
 
 logger = logging.getLogger(__name__)

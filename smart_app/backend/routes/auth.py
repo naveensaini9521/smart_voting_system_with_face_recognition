@@ -7,15 +7,15 @@ import numpy as np
 import base64
 import io
 from PIL import Image
-from smart_app.backend.mongo_models import Admin, AuditLog, Voter, FaceEncoding
+from mongo_models import Admin, AuditLog, Voter, FaceEncoding
 import bcrypt
-from smart_app.backend.services.face_recognition_service import (
+from services.face_recognition_service import (
     hybrid_face_service,
     multi_face_service,
     knn_face_service,
     FaceRecognitionResult
 )
-from smart_app.backend.services.face_utils import face_utils
+from services.face_utils import face_utils
 
 logger = logging.getLogger(__name__)
 
@@ -554,181 +554,6 @@ def admin_login():
             'success': False,
             'message': 'Admin login failed. Please try again.'
         }), 500
-
-# Other routes remain the same as before...
-# (check_auth, logout, verify_token, etc.)
-        
-# Admin authentication routes
-# @auth_bp.route('/admin/login', methods=['POST', 'OPTIONS'])
-# def admin_login():
-#     """Verify admin credentials"""
-#     if request.method == 'OPTIONS':
-#         return jsonify({'status': 'ok'}), 200
-        
-#     try:
-#         print(f"=== ADMIN LOGIN REQUEST ===")
-#         print(f"Content-Type: {request.content_type}")
-#         print(f"Headers: {dict(request.headers)}")
-#         print(f"Method: {request.method}")
-#         print(f"Path: {request.path}")
-        
-#         # Robust data parsing
-#         data = None
-#         if request.content_type and 'application/json' in request.content_type:
-#             try:
-#                 data = request.get_json()
-#                 print(f"Parsed JSON data: {data}")
-#             except Exception as json_error:
-#                 print(f"JSON parsing error: {json_error}")
-#                 data = None
-        
-#         # If JSON parsing failed, try form data
-#         if data is None:
-#             try:
-#                 data = request.form.to_dict()
-#                 print(f"Parsed form data: {data}")
-#             except Exception as form_error:
-#                 print(f"Form parsing error: {form_error}")
-#                 data = None
-        
-#         # If still no data, try raw data
-#         if data is None:
-#             try:
-#                 raw_data = request.get_data(as_text=True)
-#                 print(f"Raw data: {raw_data}")
-#                 if raw_data:
-#                     import json
-#                     data = json.loads(raw_data)
-#                     print(f"Parsed raw JSON data: {data}")
-#             except Exception as raw_error:
-#                 print(f"Raw data parsing error: {raw_error}")
-#                 data = None
-        
-#         if not data:
-#             print("No data could be parsed from request")
-#             return jsonify({
-#                 'success': False,
-#                 'message': 'No valid data provided'
-#             }), 400
-        
-#         # Debug: Print the actual type and content of data
-#         print(f"Data type: {type(data)}")
-#         print(f"Data content: {data}")
-        
-#         # Handle case where data might be a string
-#         if isinstance(data, str):
-#             print("Data is string, attempting to parse as JSON")
-#             try:
-#                 import json
-#                 data = json.loads(data)
-#                 print(f"Successfully parsed string data: {data}")
-#             except json.JSONDecodeError:
-#                 print("Failed to parse string as JSON")
-#                 return jsonify({
-#                     'success': False,
-#                     'message': 'Invalid JSON data'
-#                 }), 400
-        
-#         # Now safely access data as dictionary
-#         username = data.get('username') if isinstance(data, dict) else None
-#         password = data.get('password') if isinstance(data, dict) else None
-        
-#         if not username or not password:
-#             print(f"Missing credentials. Username: {username}, Password: {'*' * len(password) if password else 'None'}")
-#             return jsonify({
-#                 'success': False,
-#                 'message': 'Username and password are required'
-#             }), 400
-        
-#         print(f"=== ADMIN LOGIN ATTEMPT ===")
-#         print(f"Username: {username}")
-        
-#         # Find admin by username
-#         admin = Admin.find_by_username(username)
-        
-#         if not admin:
-#             print(f"Admin not found: {username}")
-#             return jsonify({
-#                 'success': False,
-#                 'message': 'Invalid admin credentials'
-#             }), 401
-        
-#         print(f"Admin found: {admin['username']} - {admin.get('admin_id')}")
-        
-#         # Verify password
-#         if not Admin.verify_password(admin, password):
-#             print("Admin password verification failed")
-#             return jsonify({
-#                 'success': False,
-#                 'message': 'Invalid admin credentials'
-#             }), 401
-        
-#         print("Admin password verified successfully")
-        
-#         # Check if admin is active
-#         if not admin.get('is_active', True):
-#             return jsonify({
-#                 'success': False,
-#                 'message': 'Admin account has been deactivated'
-#             }), 401
-        
-#         # Prepare admin data for response
-#         admin_data = {
-#             'admin_id': admin['admin_id'],
-#             'username': admin['username'],
-#             'full_name': admin['full_name'],
-#             'email': admin['email'],
-#             'role': admin['role'],
-#             'permissions': admin.get('permissions', {}),
-#             'department': admin.get('department'),
-#             'access_level': admin.get('access_level', 1),
-#             'last_login': admin.get('last_login')
-#         }
-        
-#         # Generate JWT token for admin
-#         admin_token = generate_token({
-#             'admin_id': admin['admin_id'],
-#             'username': admin['username'],
-#             'role': admin['role'],
-#             'email': admin['email']
-#         }, user_type='admin')
-        
-#         # Update last login
-#         try:
-#             Admin.update_one(
-#                 {"admin_id": admin['admin_id']},
-#                 {"$set": {"last_login": datetime.utcnow()}}
-#             )
-#         except Exception as e:
-#             print(f"Warning: Could not update admin last login: {e}")
-        
-#         # Log admin login
-#         AuditLog.create_log(
-#             action="admin_login",
-#             user_id=admin['admin_id'],
-#             user_type="admin",
-#             details=f"Admin {admin['username']} logged in",
-#             ip_address=request.remote_addr,
-#             user_agent=request.headers.get('User-Agent')
-#         )
-        
-#         logger.info(f"Admin login successful: {username}")
-        
-#         return jsonify({
-#             'success': True,
-#             'message': 'Admin login successful',
-#             'admin_data': admin_data,
-#             'token': admin_token
-#         })
-        
-#     except Exception as e:
-#         logger.error(f'Admin login error: {str(e)}')
-#         import traceback
-#         print(f"Admin login exception: {traceback.format_exc()}")
-#         return jsonify({
-#             'success': False,
-#             'message': 'Admin login failed. Please try again.'
-#         }), 500
 
 @auth_bp.route('/admin/verify-token', methods=['GET', 'OPTIONS'])
 def admin_verify_token():

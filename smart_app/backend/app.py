@@ -2,70 +2,69 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 import os
-from dotenv import load_dotenv
-from config import config_map 
+from datetime import datetime
+from config import config_map, DevelopmentConfig 
 from flask_socketio import SocketIO
-from smart_app.backend.extensions import mongo, jwt, mail, bcrypt, socketio
-from smart_app.backend.create_mongo_collections import create_collections
+from extensions import mongo, jwt, mail, bcrypt, socketio
+from create_mongo_collections import create_collections
+from routes.auth import auth_bp
+from routes.voters import voting_bp
+from routes.admin import admin_bp
+from routes.otp import otp_bp
+from frontend import frontend_bp  
+from routes.register import register_bp
+from routes.stats import stats_bp
+from routes.home import home_bp  
+from routes.test_mongodb import mongodb_bp 
+from routes.dashboard import dashboard_bp
+from routes.elections import election_bp
+from socket_events import register_socket_events
+from dotenv import load_dotenv
 
-# Register Blueprints
-from smart_app.backend.routes.auth import auth_bp
-from smart_app.backend.routes.voters import voting_bp
-from smart_app.backend.routes.admin import admin_bp
-from smart_app.backend.routes.otp import otp_bp
-from smart_app.backend.frontend import frontend_bp  # Serve React SPA
-from smart_app.backend.routes.register import register_bp
-from smart_app.backend.routes.stats import stats_bp
-from smart_app.backend.routes.home import home_bp  
-from smart_app.backend.routes.test_mongodb import mongodb_bp 
-from smart_app.backend.routes.dashboard import dashboard_bp
-from smart_app.backend.routes.elections import election_bp
-
-# Import Socket.IO event handlers
-from smart_app.backend.socket_events import register_socket_events
-
-# Load environment variables
 load_dotenv()
 
 def create_app():
-    # Flask app without static_folder; React handled by frontend_bp
+
     app = Flask(__name__, instance_relative_config=True)
 
-    # Load configuration
-    app.config.from_object(config_map[os.environ["ENVIRONMENT"]])
-    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
+    env = os.getenv("ENVIRONMENT", "DEVELOPMENT")
+    app.config.from_object(config_map.get(env, DevelopmentConfig))
+    
+    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 
-    # Ensure uploads folder exists
     os.makedirs(app.config.get("UPLOAD_FOLDER", "uploads"), exist_ok=True)
     
-    # Enable CORS for React dev server - FIXED CONFIGURATION
-    # Enable CORS for all relevant origins
     CORS(app, 
         origins=[
-            "http://localhost:5000", "http://127.0.0.1:5000", "http://localhost:3000", "http://127.0.0.1:3000",
-            "http://localhost:5173",  # Vite dev server
-            "http://127.0.0.1:5173"   # Vite dev server
+            "http://localhost:5000",
+            "http://127.0.0.1:5000",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:3001",     
+            "http://127.0.0.1:3001",    
+            "http://localhost:5173",
+            "http://127.0.0.1:5173"
         ],
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"],
         supports_credentials=True)
 
-    # Initialize extensions
+    # extensions
     mongo.init_app(app)
     jwt.init_app(app)
     mail.init_app(app)
     bcrypt.init_app(app)
     
-    # Initialize Socket.IO with the app
     app.connected_clients = {}
     
     socketio.init_app(
     app, 
     cors_allowed_origins="*",
-    async_mode="threading",
+    # async_mode="threading",
+    async_mode="gevent",
     logger=True,
     engineio_logger=True,
-    transports=['polling', 'websocket'],  # Explicitly define allowed transports
+    transports=['polling', 'websocket'], 
     ping_timeout=60,
     ping_interval=25,
     max_http_buffer_size=1e8,
@@ -75,10 +74,8 @@ def create_app():
 )
 
 
-    # Register Socket.IO event handlers
     register_socket_events(socketio)
 
-    # Register API Blueprints
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(voting_bp, url_prefix="/api/voter")
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
@@ -90,27 +87,24 @@ def create_app():
     app.register_blueprint(election_bp, url_prefix='/api/election')
     app.register_blueprint(mongodb_bp, url_prefix="/api/mongodb")
 
-    # Register React frontend last
+    # Register React frontend 
     app.register_blueprint(frontend_bp)
 
 
-    # Global error handlers (for API routes)
+    # Global error handlers 
     @app.errorhandler(404)
     def api_not_found(error):
         if request.path.startswith('/api/'):
             return jsonify({'message': 'API resource not found'}), 404
-        # For non-API 404s, the frontend_bp will handle them
 
     @app.errorhandler(500)
     def internal_error(error):
         return jsonify({'message': 'Internal server error'}), 500
 
-    # Test route to verify API is working
     @app.route('/api/test')
     def test_api():
         return jsonify({'message': 'API is working!', 'status': 'success'})
 
-    # Socket.IO health check route
     @app.route('/api/socket-health')
     def socket_health():
         return jsonify({
@@ -119,7 +113,6 @@ def create_app():
             'connected_clients': len(getattr(socketio, 'connected_clients', {}))
         })
     
-    # In app.py - add these routes for Socket.IO debugging
 
     @app.route('/api/socket-debug')
     def socket_debug():

@@ -8,15 +8,14 @@ from flask_cors import cross_origin
 import re  
 
 # Import from your project structure
-from smart_app.backend.mongo_models import Voter, Election, Vote, Candidate, AuditLog
-from smart_app.backend.routes.dashboard import get_authenticated_voter, voter_required
+from mongo_models import Voter, Election, Vote, Candidate, AuditLog
+from routes.dashboard import get_authenticated_voter, voter_required
 
 logger = logging.getLogger(__name__)
 
 # Create blueprint
 election_bp = Blueprint('election', __name__)
 
-# ============ ELECTION ROUTES ============
 
 @election_bp.route('/elections', methods=['GET', 'OPTIONS'])
 @cross_origin()

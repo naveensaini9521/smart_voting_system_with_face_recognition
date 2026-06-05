@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+.venv/
+env/
+
+# Environment Variables
+.env
+.env.*
+
+# IDEs
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Python Build Files
+build/
+dist/
+*.egg-info/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# MongoDB Data
+mongodb_data/
+
+# Uploaded Images
+uploads/
+temp/
+tmp/
+
+# Face Recognition Encodings
+encodings/
+known_faces/
+
+# Docker
+docker-compose.override.yml
+
+# TensorFlow / Model Files (optional)
+*.h5
+*.keras
+*.pb
+
+# Secrets
+config/secrets.py

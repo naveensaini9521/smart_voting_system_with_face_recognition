@@ -3,8 +3,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 from bson import ObjectId
 
-from smart_app.backend.extensions import mongo
-from smart_app.backend.mongo_models import Voter, Election, Candidate, Vote
+from extensions import mongo
+from mongo_models import Voter, Election, Candidate, Vote
 
 voting_bp = Blueprint('voters', __name__)
 

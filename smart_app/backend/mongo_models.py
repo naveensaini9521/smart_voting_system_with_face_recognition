@@ -2,7 +2,7 @@ from datetime import datetime, date, timedelta
 from venv import logger
 from bson import ObjectId
 from flask import current_app
-from smart_app.backend.extensions import mongo
+from extensions import mongo
 import random
 import string
 import bcrypt

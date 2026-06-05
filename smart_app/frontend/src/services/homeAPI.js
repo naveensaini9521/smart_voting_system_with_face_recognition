@@ -1,66 +1,36 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000/api/home';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
-// Create axios instance with default config
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+const homeApiClient = axios.create({
+  baseURL: `${BASE_URL}/home`,  
+  headers: { 'Content-Type': 'application/json' },
+  timeout: 30000,
 });
 
-// Add response interceptor for consistent error handling
-apiClient.interceptors.response.use(
+homeApiClient.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    console.error('API Error:', error);
+    console.error('Home API Error:', error);
     return Promise.reject(error);
   }
 );
 
 const homeAPI = {
-  // Test connection
-  testConnection: () => apiClient.get('/test'),
-  
-  // System info
-  getSystemInfo: () => apiClient.get('/system-info'),
-  
-  // Features
-  getFeatures: () => apiClient.get('/features'),
-  
-  // Testimonials
-  getTestimonials: () => apiClient.get('/testimonials'),
-  
-  // Stats
-  getStats: () => apiClient.get('/stats'),
-  
-  // Process steps
-  getProcessSteps: () => apiClient.get('/process-steps'),
-  
-  // Technologies
-  getTechnologies: () => apiClient.get('/technologies'),
-  
-  // FAQs
-  getFAQs: () => apiClient.get('/faqs'),
-  
-  // Health check
-  getHealth: () => apiClient.get('/health'),
-  
-  // Project info
-  getProjectInfo: () => apiClient.get('/project-info'),
-  
-  // Database stats
-  getDatabaseStats: () => apiClient.get('/database-stats'),
-  
-  // Contact form submission
-  submitContact: (data) => apiClient.post('/contact', data),
-  
-  // Newsletter subscription
-  subscribeNewsletter: (email) => apiClient.post('/newsletter', { email }),
-  
-  // Demo request
-  requestDemo: (data) => apiClient.post('/demo-request', data),
+  testConnection: () => homeApiClient.get('/test'),
+  getSystemInfo: () => homeApiClient.get('/system-info'),
+  getFeatures: () => homeApiClient.get('/features'),
+  getTestimonials: () => homeApiClient.get('/testimonials'),
+  getStats: () => homeApiClient.get('/stats'),
+  getProcessSteps: () => homeApiClient.get('/process-steps'),
+  getTechnologies: () => homeApiClient.get('/technologies'),
+  getFAQs: () => homeApiClient.get('/faqs'),
+  getHealth: () => homeApiClient.get('/health'),
+  getProjectInfo: () => homeApiClient.get('/project-info'),
+  getDatabaseStats: () => homeApiClient.get('/database-stats'),
+  submitContact: (data) => homeApiClient.post('/contact', data),
+  subscribeNewsletter: (email) => homeApiClient.post('/newsletter', { email }),
+  requestDemo: (data) => homeApiClient.post('/demo-request', data),
 };
 
 export default homeAPI;

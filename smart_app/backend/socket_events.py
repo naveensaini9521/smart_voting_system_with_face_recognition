@@ -2,7 +2,7 @@ import logging
 from flask_socketio import emit, join_room, leave_room
 from flask import request
 from datetime import datetime, timedelta
-from smart_app.backend.mongo_models import Voter, Admin
+from mongo_models import Voter, Admin
 
 logger = logging.getLogger(__name__)
 

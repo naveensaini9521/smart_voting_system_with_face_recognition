@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  frontend:
+    build:
+      context: ./smart_app/frontend
+      dockerfile: Dockerfile
+    container_name: react-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: always
+    networks:
+      - voting-network
+
+  backend:
+    build:
+      context: ./smart_app/backend
+      dockerfile: Dockerfile
+    container_name: voting-system
+    ports:
+      - "5000:5000"
+    environment:
+      - ENVIRONMENT=DEVELOPMENT
+      - MONGO_URI=mongodb://mongo:27017/smart_voting_system
+      - SECRET_KEY=eb153fcfa5a755ae94a949f86fbbaa5c53cd2b7faf5c848ba09307d2f7acdce1
+      - JWT_SECRET_KEY=sUJbaMMUAKYojj0dFe94jO-ld2oc028u3qw2KU71Ui0
+    depends_on:
+      - mongo
+    restart: always
+    networks:
+      - voting-network
+
+  mongo:
+    image: mongo:7
+    container_name: voting-system-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: always
+    networks:
+      - voting-network
+
+volumes:
+  mongo_data:
+
+networks:
+  voting-network:
+    driver: bridge

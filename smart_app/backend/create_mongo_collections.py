@@ -1,5 +1,5 @@
 from flask import current_app
-from smart_app.backend.extensions import mongo
+from extensions import mongo
 
 def create_collections(app):
     """Create ALL MongoDB collections"""
