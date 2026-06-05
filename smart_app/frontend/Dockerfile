@@ -12,6 +12,9 @@ RUN npm run build
 
 FROM nginx:alpine
 
+#override change in nginx site config to set all requests hits to /api to goes gunicorn running on hostname is http://backend:5000 port 
+COPY default.conf /etc/nginx/conf.d/default.conf
+
 COPY --from=build /app/dist /usr/share/nginx/html
 
 EXPOSE 80

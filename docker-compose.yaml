@@ -16,6 +16,7 @@ services:
 
   backend:
     platform: linux/arm64
+    hostname: backendapp
     build:
       context: ./smart_app/backend
       dockerfile: Dockerfile
