@@ -81,6 +81,7 @@ Open a terminal and navigate to the backend folder:
 
 ```bash
 cd /Smart-Voting-System-with-Face-Recognition/smart_app/backend
+python3 run.py
 ```
 
 The backend will be available at http://localhost:5000
