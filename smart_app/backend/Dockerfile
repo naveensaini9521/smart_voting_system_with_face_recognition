@@ -10,6 +10,9 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
 COPY requirements.txt .
 
 RUN pip install --upgrade pip && \
@@ -17,8 +20,8 @@ RUN pip install --upgrade pip && \
 
 COPY . .
 
-
-RUN find . -type d -name "__pycache__" -exec rm -rf {} +
+RUN useradd -m appuser && chown -R appuser /app
+USER appuser
 
 EXPOSE 5000
 
