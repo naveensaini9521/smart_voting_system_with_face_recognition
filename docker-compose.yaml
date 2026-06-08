@@ -45,8 +45,11 @@ services:
 
     expose:
       - "27017"
+
     volumes:
       - mongo_data:/data/db
+      - ./backup:/backup
+
     restart: always
     networks:
       - voting-network
