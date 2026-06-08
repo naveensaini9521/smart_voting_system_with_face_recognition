@@ -527,7 +527,7 @@ const HomePage = () => {
   return (
     <div style={styles.homePage}>
       {/* API Error Alert */}
-      {apiError && (
+      {/* {apiError && (
         <Alert variant="warning" style={styles.alert}>
           <div className="d-flex align-items-center justify-content-between">
             <div>
@@ -544,7 +544,7 @@ const HomePage = () => {
             </Button>
           </div>
         </Alert>
-      )}
+      )} */}
 
       {/* System Health Banner */}
       {systemHealth && (

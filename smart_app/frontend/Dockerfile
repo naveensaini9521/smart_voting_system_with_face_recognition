@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 node:18 AS build
+FROM node:18 AS build
 
 WORKDIR /app
 
@@ -11,16 +11,15 @@ COPY . .
 
 RUN npm run build
 
-
 FROM nginx:1.25
 
 RUN rm /etc/nginx/nginx.conf /etc/nginx/conf.d/default.conf
 
-COPY /nginx.conf /etc/nginx/nginx.conf
+COPY nginx.conf /etc/nginx/nginx.conf
 
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# COPY ./ssl /etc/nginx/ssl
+COPY ./ssl /etc/nginx/ssl
 
 EXPOSE 80 443
 

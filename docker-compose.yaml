@@ -1,6 +1,6 @@
 services:
   frontend:
-    platform: linux/arm64
+    # platform: linux/arm64
     build:
       context: ./smart_app/frontend
       dockerfile: Dockerfile
@@ -15,11 +15,9 @@ services:
       - backend
     networks:
       - voting-network
-    # volumes:
-    #   - /ssl:/etc/nginx/ssl:ro
 
   backend:
-    platform: linux/arm64
+    # platform: linux/arm64
     hostname: backend
     build:
       context: ./smart_app/backend
@@ -41,7 +39,7 @@ services:
       - voting-network
 
   mongo:
-    platform: linux/arm64
+    # platform: linux/arm64
     image: mongo:7
     container_name: voting-system-mongo
 
