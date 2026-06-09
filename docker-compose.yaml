@@ -16,6 +16,10 @@ services:
     networks:
       - voting-network
 
+    mem_limit: 256m
+    cpus: 0.50
+    cpuset: "0-1"
+
   backend:
     # platform: linux/arm64
     hostname: backend
@@ -29,14 +33,18 @@ services:
     environment:
       - ENVIRONMENT=PRODUCTION
       - MONGO_URI=mongodb://mongo:27017/smart_voting_system
-      - SECRET_KEY=your_secret
-      - JWT_SECRET_KEY=your_jwt_secret
+      - SECRET_KEY=eb153fcfa5a755ae94a949f86fbbaa5c53cd2b7faf5c848ba09307d2f7acdce1
+      - JWT_SECRET_KEY=sUJbaMMUAKYojj0dFe94jO-ld2oc028u3qw2KU71Ui0
 
     depends_on:
       - mongo
     restart: always
     networks:
       - voting-network
+
+    mem_limit: 512m
+    cpus: 1.0
+    cpuset: "0-3"
 
   mongo:
     # platform: linux/arm64
@@ -53,6 +61,12 @@ services:
     restart: always
     networks:
       - voting-network
+
+    mem_limit: 1g
+    cpus: 1.0
+    cpuset: "0-3"
+
+    command: ["mongod", "--wiredTigerCacheSizeGB=0.25"]
 
 volumes:
   mongo_data:
