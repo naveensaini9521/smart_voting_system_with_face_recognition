@@ -1,6 +1,5 @@
 services:
   frontend:
-    # platform: linux/arm64
     build:
       context: ./smart_app/frontend
       dockerfile: Dockerfile
@@ -8,11 +7,14 @@ services:
     ports:
       - "80:80"
       - "443:443"
+
     security_opt:
       - seccomp:unconfined
     restart: always
     depends_on:
-      - backend
+      - backend_1
+      - backend_2
+      - backend_3
     networks:
       - voting-network
 
@@ -20,34 +22,63 @@ services:
     cpus: 0.50
     cpuset: "0-1"
 
-  backend:
-    # platform: linux/arm64
-    hostname: backend
+  backend_1:
     build:
       context: ./smart_app/backend
-      dockerfile: Dockerfile
-    container_name: voting-system
-
-    expose:
-      - "5000"
-    environment:
-      - ENVIRONMENT=PRODUCTION
-      - MONGO_URI=mongodb://mongo:27017/smart_voting_system
-      - SECRET_KEY=eb153fcfa5a755ae94a949f86fbbaa5c53cd2b7faf5c848ba09307d2f7acdce1
-      - JWT_SECRET_KEY=sUJbaMMUAKYojj0dFe94jO-ld2oc028u3qw2KU71Ui0
-
+    container_name: backend_1
+    env_file:
+      - .env
     depends_on:
       - mongo
-    restart: always
+      - redis
     networks:
       - voting-network
 
     mem_limit: 512m
     cpus: 1.0
-    cpuset: "0-3"
+
+  backend_2:
+    build:
+      context: ./smart_app/backend
+    container_name: backend_2
+    env_file:
+      - .env
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - voting-network
+
+    mem_limit: 512m
+    cpus: 1.0
+
+  backend_3:
+    build:
+      context: ./smart_app/backend
+    container_name: backend_3
+    env_file:
+      - .env
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - voting-network
+
+    mem_limit: 512m
+    cpus: 1.0
+
+  redis:
+    image: redis:7-alpine
+    container_name: voting-redis
+    restart: always
+
+    networks:
+      - voting-network
+
+    mem_limit: 256m
+    cpus: 0.5
 
   mongo:
-    # platform: linux/arm64
     image: mongo:7
     container_name: voting-system-mongo
 
