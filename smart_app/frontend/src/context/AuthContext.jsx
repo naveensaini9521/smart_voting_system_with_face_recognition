@@ -234,7 +234,7 @@ export const AuthProvider = ({ children }) => {
             clearAdminAuthData();
           }
         } catch (error) {
-          console.log('❌ Admin token verification error:', error);
+          console.log('Admin token verification error:', error);
           // If verification fails, use local data for now but schedule a refresh
           if (adminData) {
             console.log('📋 Using cached admin data (verification failed)');

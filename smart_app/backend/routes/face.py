@@ -5,6 +5,7 @@ face_bp = Blueprint("face", __name__)
 UPLOAD_FOLDER = "face_uploads/"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+
 @face_bp.route("/register", methods=["POST"])
 def register_face():
     data = request.json

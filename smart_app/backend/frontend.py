@@ -1,34 +1,36 @@
+# smart_app/backend/routes/frontend.py
 from flask import Blueprint, send_from_directory, jsonify, request
 import os
+import logging
 
-frontend_bp = Blueprint('frontend', __name__)
+logger = logging.getLogger(__name__)
+frontend_bp = Blueprint("frontend", __name__)
 
-# Serve React App
-@frontend_bp.route('/', defaults={'path': ''})
-@frontend_bp.route('/<path:path>')
-def serve_react_app(path):
-    # Path to your React build directory
-    react_build_path = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist')
-    
-    # If the path exists as a file, serve it
-    if path != "" and os.path.exists(os.path.join(react_build_path, path)):
-        return send_from_directory(react_build_path, path)
-    else:
-        # Otherwise serve the index.html
-        return send_from_directory(react_build_path, 'index.html')
+REACT_BUILD = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+)
 
-# Error handlers for frontend routes
+
+@frontend_bp.route("/", defaults={"path": ""})
+@frontend_bp.route("/<path:path>")
+def serve_react(path):
+
+    if path.startswith("api/"):
+        return jsonify({"error": "API endpoint not found"}), 404
+
+    full_path = os.path.join(REACT_BUILD, path)
+    if path and os.path.isfile(full_path):
+        return send_from_directory(REACT_BUILD, path)
+
+    try:
+        return send_from_directory(REACT_BUILD, "index.html")
+    except Exception as e:
+        logger.error(f"Failed to serve index.html from {REACT_BUILD}: {e}")
+        return jsonify({"error": "Frontend build not found"}), 500
+
+
 @frontend_bp.errorhandler(404)
 def not_found(error):
-    # For frontend routes, serve React's index.html to handle client-side routing
-    react_build_path = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist')
-    return send_from_directory(react_build_path, 'index.html')
-
-@frontend_bp.errorhandler(500)
-def internal_error(error):
-    return jsonify({'message': 'Internal server error'}), 500
-
-# Test route to verify frontend is working
-@frontend_bp.route('/api/test-frontend')
-def test_frontend():
-    return jsonify({'message': 'Frontend route is working!', 'status': 'success'})
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "API endpoint not found"}), 404
+    return send_from_directory(REACT_BUILD, "index.html")

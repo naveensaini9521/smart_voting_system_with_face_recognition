@@ -18,5 +18,5 @@ if __name__ == "__main__":
         port=5001,
         debug=False,
         use_reloader=False,
-        allow_unsafe_werkzeug=True
+        allow_unsafe_werkzeug=True,
     )

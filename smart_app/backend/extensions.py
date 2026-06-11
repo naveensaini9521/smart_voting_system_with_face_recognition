@@ -1,22 +1,18 @@
-# smart_app/backend/extensions.py
 from flask_pymongo import PyMongo
 from flask_jwt_extended import JWTManager
 from flask_mail import Mail
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from flask_socketio import SocketIO
+from flask_caching import Cache
 
-# MongoDB only - no SQLAlchemy
 mongo = PyMongo()
 jwt = JWTManager()
 mail = Mail()
 cors = CORS()
 bcrypt = Bcrypt()
+cache = Cache()
 
 socketio = SocketIO(
-    cors_allowed_origins="*",
-    # async_mode='threading', 
-    async_mode="gevent",
-    logger=False,
-    engineio_logger=False
+    cors_allowed_origins="*", async_mode="gevent", logger=False, engineio_logger=False
 )

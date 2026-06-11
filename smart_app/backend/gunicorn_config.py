@@ -16,10 +16,10 @@ timeout = 60
 graceful_timeout = 30
 keepalive = 5
 
-max_requests = 1000
-max_requests_jitter = 10
+max_requests = 200
+max_requests_jitter = 20
 
-preload_app = False
+preload_app = True
 
 accesslog = "-"
 errorlog = "-"
@@ -27,7 +27,7 @@ loglevel = "info"
 
 capture_output = False
 
-access_log_format = ('%(h)s %(l)s %(u)s %(t)s ''"%(r)s" %(s)s %(b)s ''"%(f)s" "%(a)s"')
+access_log_format = "%(h)s %(l)s %(u)s %(t)s " '"%(r)s" %(s)s %(b)s ' '"%(f)s" "%(a)s"'
 
 capture_output = True
 

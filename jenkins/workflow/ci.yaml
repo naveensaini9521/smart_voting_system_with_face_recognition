@@ -1,0 +1,146 @@
+pipeline {
+    agent any
+
+    environment {
+        BACKEND_IMAGE = "naveen9521/smart-voting-backend"
+        FRONTEND_IMAGE = "naveen9521/smart-voting-frontend"
+        BUILD_TAG = "${BUILD_NUMBER}"
+
+        VENV_DIR = ".venv"
+        PATH = "${WORKSPACE}/.venv/bin:${env.PATH}"
+    }
+
+    stages {
+
+        stage('Checkout Latest Code') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/naveensaini9521/smart_voting_system_with_face_recognition.git'
+            }
+        }
+
+        stage('Setup Virtual Environment') {
+            steps {
+                sh '''
+                python3 -m venv .venv
+                . .venv/bin/activate
+                pip install --upgrade pip
+                pip install -r requirements.txt
+                pip install black flake8 pytest
+                '''
+            }
+        }
+
+        stage('Black Validation') {
+            steps {
+                sh '''
+                . .venv/bin/activate
+                
+                black --check .
+                
+                echo "Black formatting OK"
+                '''
+            }
+        }
+        
+        stage('Flake8 Linting') {
+            steps {
+                sh '''
+                . .venv/bin/activate
+                
+                flake8 . \
+                    --max-line-length=88 \
+                    --extend-ignore=E203,W503
+                    '''
+            }
+        }
+        
+        stage('Run Tests') {
+            steps {
+                sh '. .venv/bin/activate && pytest -v'
+            }
+        }
+
+        stage('SonarQube Scan') {
+            steps {
+                withSonarQubeEnv('sonarqube') {
+                    sh '''
+                    sonar-scanner \
+                      -Dsonar.projectKey=smart-voting-system \
+                      -Dsonar.projectName=smart-voting-system \
+                      -Dsonar.sources=. \
+                      -Dsonar.python.version=3.11
+                    '''
+                }
+            }
+        }
+
+        stage('Build Backend Docker Image') {
+            steps {
+                sh '''
+                DOCKER_BUILDKIT=1 docker build \
+                  -t ${BACKEND_IMAGE}:${BUILD_TAG} \
+                  -t ${BACKEND_IMAGE}:latest \
+                  .
+                '''
+            }
+        }
+
+        stage('Build Frontend Docker Image') {
+            steps {
+                sh '''
+                DOCKER_BUILDKIT=1 docker build \
+                  -t ${FRONTEND_IMAGE}:${BUILD_TAG} \
+                  -t ${FRONTEND_IMAGE}:latest \
+                  ./frontend
+                '''
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                    echo "$DOCKER_PASS" | docker login \
+                        -u "$DOCKER_USER" \
+                        --password-stdin
+                    '''
+                }
+            }
+        }
+
+        stage('Push Images') {
+            steps {
+                sh '''
+                docker push ${BACKEND_IMAGE}:${BUILD_TAG}
+                docker push ${BACKEND_IMAGE}:latest
+
+                docker push ${FRONTEND_IMAGE}:${BUILD_TAG}
+                docker push ${FRONTEND_IMAGE}:latest
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'CI Pipeline completed successfully'
+        }
+
+        failure {
+            echo 'CI Pipeline failed'
+        }
+
+        always {
+            sh '''
+            docker logout || true
+            rm -rf .venv || true
+            '''
+            cleanWs()
+        }
+    }
+}
