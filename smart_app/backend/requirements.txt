@@ -2,6 +2,7 @@ absl-py==2.4.0
 bcrypt==4.0.1
 beautifulsoup4==4.14.3
 bidict==0.23.1
+black==26.5.1
 blinker==1.9.0
 cachelib==0.14.0
 certifi==2026.5.20
@@ -41,12 +42,15 @@ MarkupSafe==3.0.3
 matplotlib==3.10.9
 mediapipe==0.10.35
 msgspec==0.21.1
+mypy_extensions==1.1.0
 narwhals==2.22.0
 numpy==2.4.6
 opencv-contrib-python==4.13.0.92
 opencv-python-headless==4.13.0.92
 packaging==26.2
+pathspec==1.1.1
 pillow==12.2.0
+platformdirs==4.10.0
 pycparser==3.0
 PyJWT==2.13.0
 pymongo==4.15.3
@@ -55,6 +59,7 @@ python-dateutil==2.9.0.post0
 python-dotenv==1.2.2
 python-engineio==4.13.1
 python-socketio==5.16.1
+pytokens==0.4.1
 qrcode==8.2
 redis==8.0.0
 reportlab==4.5.1
