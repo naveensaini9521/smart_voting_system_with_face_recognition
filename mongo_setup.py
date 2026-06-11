@@ -10,11 +10,7 @@ db = client["smart_voting_system"]
 users_collection = db["users"]
 
 # Insert a sample record
-user_data = {
-    "name": "Admin",
-    "email": "admin@example.com",
-    "role": "admin"
-}
+user_data = {"name": "Admin", "email": "admin@example.com", "role": "admin"}
 users_collection.insert_one(user_data)
 
 print("Database and collection created successfully!")
