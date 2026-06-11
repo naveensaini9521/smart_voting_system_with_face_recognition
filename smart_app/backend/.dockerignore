@@ -1,61 +1,68 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
+**pycache**/
+_.pyc
+_.pyo
+_.pyd
+_.py[cod]
+_$py.class
+_.so
 
-# Virtual Environments
 venv/
 .venv/
 env/
-
-# Environment Variables
 .env
-.env.*
+.env._
+tests
+tests/
+docs
+_.md
+Dockerfile
+.dockerignore
+.git/
+.gitignore
 
-# IDEs
-.vscode/
-.idea/
-
-# Logs
+\*.log
 *.log
 logs/
 
-# OS Files
 .DS_Store
 Thumbs.db
 
-# Python Build Files
+node_modules/
 build/
 dist/
-*.egg-info/
+\*.egg-info/
 
-# Testing
 .pytest_cache/
 .coverage
 htmlcov/
 
-# Jupyter
-.ipynb_checkpoints/
-
 # MongoDB Data
+
 mongodb_data/
 
-# Uploaded Images
+models/
+data/
+profiler/
+scripts/
 uploads/
 temp/
 tmp/
 
+
+../frontend/
+frontend/
+
+.vscode/
+.idea/
 # Face Recognition Encodings
+
 encodings/
 known_faces/
 
 # Docker
+
 docker-compose.override.yml
 
-# TensorFlow / Model Files (optional)
-*.h5
-*.keras
-*.pb
-
-# Secrets
-config/secrets.py
+_.h5
+_.keras
+\*.pb
