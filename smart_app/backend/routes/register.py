@@ -209,9 +209,11 @@ def send_otp_registration():
             <body>
                 <h2>Email Verification OTP</h2>
                 <p>Your OTP for email verification is:</p>
-                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; margin: 10px 0;">
-                    <h1 style="color: #007bff; margin: 0; letter-spacing: 5px;">{otp_record["otp_code"]}</h1>
-                </div>
+                <div
+                    style="background-color: #f8f9fa; padding: 15px;
+                        border-radius: 5px; text-align: center;
+                        margin: 10px 0;"
+                >
                 <p>This OTP is valid for 10 minutes.</p>
                 <p>If you didn't request this, please ignore this email.</p>
                 <br>
