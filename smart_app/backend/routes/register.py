@@ -89,7 +89,8 @@ def send_voter_credentials(voter_data, voter_id, password):
         <h2>Voter Registration Successful!</h2>
         <p>Dear {voter_data["full_name"]},</p>
         <p>Your voter registration has been successfully completed.</p>
-        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0;">
+        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px;
+             text-align: center; margin: 10px 0;">
             <h3 style="color: #28a745; margin: 0;">Your Voter ID: <strong>{voter_id}</strong></h3>
         </div>
         <p><strong>Login Credentials:</strong></p>
@@ -687,12 +688,16 @@ def register_face(voter_id):
                         "full_name", "Unknown"
                     )
 
-                # Log duplicate attempt
+                duplicate_details = (
+                    f"Duplicate face detected for {voter_id} (matches {existing_voter_id} - "
+                    f"{similarity * 100:.1f}%)"
+                )
+
                 AuditLog.create_log(
                     action="duplicate_face_attempt",
                     user_id=voter_id,
                     user_type="voter",
-                    details=f"Duplicate face detected for {voter_id} (matches {existing_voter_id} - {similarity * 100:.1f}%)",
+                    details=duplicate_details,
                     ip_address=request.remote_addr,
                 )
 
@@ -804,12 +809,16 @@ def register_face(voter_id):
                 500,
             )
 
-        # Log successful registration
+        methods = registration_details.get("encoding_methods", [])
+        registration_details_msg = (
+            f"Face registered for voter {voter_id} (quality: {result.quality_score:.4f}, "
+            f"methods: {methods})"
+        )
         AuditLog.create_log(
             action="face_registered",
             user_id=voter_id,
             user_type="voter",
-            details=f"Face registered for voter {voter_id} (quality: {result.quality_score:.4f}, methods: {registration_details.get('encoding_methods', [])})",
+            details=registration_details_msg,
             ip_address=request.remote_addr,
         )
 
