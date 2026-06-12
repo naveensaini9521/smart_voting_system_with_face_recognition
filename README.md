@@ -138,7 +138,15 @@ npm run dev
 
 This project is for educational purposes.
 
+## docker overlay architecture
 
-## docker overlay architecture 
 ##TODO
 
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+
+Or permanently:
+
+echo 'export DOCKER_BUILDKIT=1' >> ~/.bashrc
+echo 'export COMPOSE_DOCKER_CLI_BUILD=1' >> ~/.bashrc
+source ~/.bashrc
