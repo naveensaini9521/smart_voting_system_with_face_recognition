@@ -4,9 +4,8 @@ from flask_socketio import SocketIO
 
 logger = logging.getLogger(__name__)
 
-# Create Socket.IO instance with comprehensive configuration
 socketio = SocketIO(
-    cors_allowed_origins="*",  # Allow all origins for development
+    cors_allowed_origins="*",
     async_mode="threading",
     logger=False,
     engineio_logger=False,

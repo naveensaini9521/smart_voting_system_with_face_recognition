@@ -98,7 +98,7 @@ class Voter(MongoBase):
     def generate_unique_voter_id(cls, national_id_number, date_of_birth, full_name):
         """Generate unique 8-character alphanumeric voter ID based on user data"""
         # Create a unique hash from user data
-        unique_string = (f"{national_id_number}{date_of_birth}{full_name}{datetime.utcnow().microsecond}")
+        unique_string = f"{national_id_number}{date_of_birth}{full_name}{datetime.utcnow().microsecond}"
         hash_object = hashlib.sha256(unique_string.encode())
         hash_hex = hash_object.hexdigest()
 
@@ -691,22 +691,6 @@ class FaceEncoding(MongoBase):
             return 0
 
 
-# Helper functions
-def calculate_age(date_of_birth):
-    """Calculate age from date of birth"""
-    if isinstance(date_of_birth, str):
-        date_of_birth = datetime.strptime(date_of_birth, "%Y-%m-%d").date()
-    elif isinstance(date_of_birth, datetime):
-        date_of_birth = date_of_birth.date()
-
-    today = date.today()
-    return (
-        today.year
-        - date_of_birth.year
-        - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
-    )
-
-
 class User(MongoBase):
     collection_name = "users"
 
@@ -723,7 +707,9 @@ class User(MongoBase):
         password_hash = bcrypt.hashpw(password_bytes, bcrypt.gensalt()).decode("utf-8")
 
         user_data = {
-            "user_id": (f"USER{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{''.join(random.choices(string.digits, k=4))}"),
+            "user_id": (
+                f"USER{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{''.join(random.choices(string.digits, k=4))}"
+            ),
             "username": username,
             "email": email,
             "password_hash": password_hash,
