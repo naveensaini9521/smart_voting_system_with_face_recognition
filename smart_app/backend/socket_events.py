@@ -1,8 +1,9 @@
 import logging
-from flask_socketio import emit, join_room, leave_room
-from flask import request
 from datetime import datetime, timedelta
-from mongo_models import Voter, Admin
+
+from flask import request
+from flask_socketio import emit, join_room, leave_room
+from mongo_models import Admin, Voter
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ def register_socket_events(socketio):
     def handle_connect():
         """Handle client connection with proper authentication"""
         try:
-            logger.info(f"=== SOCKETIO CONNECTION ATTEMPT ===")
+            logger.info("=== SOCKETIO CONNECTION ATTEMPT ===")
             logger.info(f"Request SID: {request.sid}")
             logger.info(f"Args: {dict(request.args)}")
 
@@ -59,7 +60,8 @@ def register_socket_events(socketio):
             auth_token = request.args.get("token")
 
             logger.info(
-                f"Connection params - voter_id: {voter_id}, admin_id: {admin_id}, user_type: {user_type}"
+                f"Connection params - voter_id: {voter_id}, "
+                f"admin_id: {admin_id}, user_type: {user_type}"
             )
 
             # Handle voter connections
@@ -274,9 +276,8 @@ def register_socket_events(socketio):
                 voter_id = client_data.get("voter_id")
                 voter = Voter.find_by_voter_id(voter_id)
                 if voter:
-                    from smart_app.backend.routes.dashboard import (
-                        get_enhanced_dashboard_data,
-                    )
+                    from smart_app.backend.routes.dashboard import \
+                        get_enhanced_dashboard_data
 
                     dashboard_data = get_enhanced_dashboard_data(voter)
                     safe_emit(
@@ -510,7 +511,7 @@ def register_socket_events(socketio):
             safe_emit(
                 "election_update",
                 update_data,
-                room=f'election_{election_data.get("election_id")}',
+                room=f"election_{election_data.get('election_id')}",
             )
 
             # Also send to admins
@@ -536,7 +537,7 @@ def register_socket_events(socketio):
 
             # Broadcast to specific voter
             safe_emit(
-                "voter_update", update_data, room=f'voter_{voter_data.get("voter_id")}'
+                "voter_update", update_data, room=f"voter_{voter_data.get('voter_id')}"
             )
 
             # Broadcast to admins

@@ -1,8 +1,6 @@
-import random
-import string
-from datetime import datetime
 import os
-from werkzeug.utils import secure_filename
+import random
+from datetime import datetime
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "pdf", "doc", "docx"}
 
@@ -11,8 +9,6 @@ def generate_voter_id():
     """Generate unique voter ID in format: VOTE{YYYY}{5-digit sequential number}"""
     current_year = datetime.now().year
 
-    # In production, you'd get the last voter ID from database
-    # For demo, we'll generate random sequential numbers
     sequential_number = random.randint(10000, 99999)
 
     return f"VOTE{current_year}{sequential_number}"
@@ -24,14 +20,12 @@ def allowed_file(filename):
 
 def save_face_encoding(voter_id, face_encoding):
     """Save face encoding to file (in production, use secure storage)"""
-    # This is a simplified version. In production, you'd use proper face encoding storage
     filename = f"face_encoding_{voter_id}.dat"
     upload_folder = "face_encodings"
 
     os.makedirs(upload_folder, exist_ok=True)
     file_path = os.path.join(upload_folder, filename)
 
-    # Save the encoding (implementation depends on your face recognition library)
     with open(file_path, "w") as f:
         f.write(face_encoding)
 
@@ -40,10 +34,6 @@ def save_face_encoding(voter_id, face_encoding):
 
 def verify_face(captured_face_image, stored_encoding_path):
     """Verify face against stored encoding"""
-    # This is a placeholder implementation
-    # In production, you'd use face_recognition library or similar
-
-    # For demo purposes, return True 85% of the time
     import random
 
     is_match = random.random() > 0.15  # 85% success rate

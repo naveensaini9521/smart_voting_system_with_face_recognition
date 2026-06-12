@@ -1,5 +1,7 @@
-from flask import Blueprint, request, jsonify
-import base64, os
+import base64
+import os
+
+from flask import Blueprint, jsonify, request
 
 face_bp = Blueprint("face", __name__)
 UPLOAD_FOLDER = "face_uploads/"

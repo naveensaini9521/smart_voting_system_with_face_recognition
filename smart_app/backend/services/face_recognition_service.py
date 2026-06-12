@@ -1,19 +1,17 @@
 # smart_app/backend/services/face_recognition_service.py
 
-import cv2
-import numpy as np
-import pickle
-import os
-import logging
-import time
 import base64
 import io
-from typing import List, Tuple, Dict, Optional, Any
+import logging
+import os
+import pickle
+import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+
+import cv2
+import numpy as np
 from PIL import Image
-from collections import defaultdict
-import math
 
 # Optional libraries with graceful fallbacks
 try:

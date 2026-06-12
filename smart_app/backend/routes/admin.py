@@ -1,14 +1,14 @@
 import logging
 import random
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from functools import wraps
-from bson import ObjectId
-from flask import Blueprint, request, jsonify
-from werkzeug.exceptions import RequestEntityTooLarge
-import jwt
 
+import jwt
+from bson import ObjectId
 from extensions import socketio
-from mongo_models import Admin, Election, Voter, Vote, Candidate, AuditLog
+from flask import Blueprint, jsonify, request
+from mongo_models import Admin, AuditLog, Candidate, Election, Vote, Voter
+from werkzeug.exceptions import RequestEntityTooLarge
 
 admin_bp = Blueprint("admin", __name__)
 logger = logging.getLogger(__name__)
@@ -635,7 +635,7 @@ def update_election_status(election_id):
                 jsonify(
                     {
                         "success": False,
-                        "message": f'Invalid status. Must be one of: {", ".join(VALID_ELECTION_STATUSES)}',
+                        "message": f"Invalid status. Must be one of: {', '.join(VALID_ELECTION_STATUSES)}",
                     }
                 ),
                 400,
@@ -851,7 +851,7 @@ def publish_election_results(election_id):
             {
                 "election_id": election_id,
                 "title": election["title"],
-                "message": f'Results for {election["title"]} have been published',
+                "message": f"Results for {election['title']} have been published",
                 "timestamp": datetime.utcnow().isoformat(),
                 "admin_id": request.admin["admin_id"],
             },
@@ -1483,7 +1483,7 @@ def update_voter_status(voter_id):
                 jsonify(
                     {
                         "success": False,
-                        "message": f'Invalid status. Must be: {", ".join(VALID_VOTER_STATUSES)}',
+                        "message": f"Invalid status. Must be: {', '.join(VALID_VOTER_STATUSES)}",
                     }
                 ),
                 400,
@@ -1579,16 +1579,16 @@ def get_audit_logs():
 
         logs_data = [
             {
-                "log_id": l.get("log_id"),
-                "action": l["action"],
-                "user_id": l["user_id"],
-                "user_type": l["user_type"],
-                "details": l.get("details"),
-                "ip_address": l.get("ip_address"),
-                "user_agent": l.get("user_agent"),
-                "timestamp": l["timestamp"],
+                "log_id": log.get("log_id"),
+                "action": log["action"],
+                "user_id": log["user_id"],
+                "user_type": log["user_type"],
+                "details": log.get("details"),
+                "ip_address": log.get("ip_address"),
+                "user_agent": log.get("user_agent"),
+                "timestamp": log["timestamp"],
             }
-            for l in paginated
+            for log in paginated
         ]
 
         return jsonify(
@@ -1619,7 +1619,7 @@ def get_audit_logs():
 def get_dashboard_reports():
     try:
         now = datetime.utcnow()
-        today = now.date()
+        now.date()
         week_ago = now - timedelta(days=7)
         month_ago = now - timedelta(days=30)
 

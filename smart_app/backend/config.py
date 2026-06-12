@@ -1,7 +1,8 @@
 import os
 from datetime import timedelta
-from dotenv import load_dotenv
 from urllib.parse import quote_plus
+
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -21,7 +22,10 @@ class Config:
 
     MONGO_URI = os.getenv(
         "MONGO_URI",
-        f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}?authSource=admin&retryWrites=true&w=majority",
+        (
+            f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/"
+            f"{MONGO_DB_NAME}?authSource=admin&retryWrites=true&w=majority"
+        ),
     )
 
     REDIS_HOST = os.getenv("REDIS_HOST", "redis")
@@ -67,7 +71,10 @@ class DevelopmentConfig(Config):
 
     MONGO_URI = os.getenv(
         "MONGO_URI",
-        f"mongodb://{Config.MONGO_USERNAME}:{Config.MONGO_PASSWORD}@{Config.MONGO_HOST}:{Config.MONGO_PORT}/smart_voting_dev?authSource=admin&retryWrites=true&w=majority",
+        (
+            f"mongodb://{Config.MONGO_USERNAME}:{Config.MONGO_PASSWORD}@{Config.MONGO_HOST}:{Config.MONGO_PORT}/"
+            f"smart_voting_dev?authSource=admin&retryWrites=true&w=majority"
+        ),
     )
 
 
@@ -75,13 +82,19 @@ class ProductionConfig(Config):
     DEBUG = False
     MONGO_URI = os.getenv(
         "MONGO_URI",
-        f"mongodb://{Config.MONGO_USERNAME}:{Config.MONGO_PASSWORD}@{Config.MONGO_HOST}:{Config.MONGO_PORT}/smart_voting_system?authSource=admin&retryWrites=true&w=majority",
+        (
+            f"mongodb://{Config.MONGO_USERNAME}:{Config.MONGO_PASSWORD}@{Config.MONGO_HOST}:{Config.MONGO_PORT}/"
+            f"smart_voting_system?authSource=admin&retryWrites=true&w=majority"
+        ),
     )
 
 
 class TestingConfig(Config):
     TESTING = True
-    MONGO_URI = f"mongodb://{Config.MONGO_USERNAME}:{Config.MONGO_PASSWORD}@{Config.MONGO_HOST}:{Config.MONGO_PORT}/smart_voting_test?authSource=admin&retryWrites=true&w=majority"
+    MONGO_URI = (
+        f"mongodb://{Config.MONGO_USERNAME}:{Config.MONGO_PASSWORD}@{Config.MONGO_HOST}:{Config.MONGO_PORT}/"
+        f"smart_voting_test?authSource=admin&retryWrites=true&w=majority"
+    )
 
 
 config_map = {

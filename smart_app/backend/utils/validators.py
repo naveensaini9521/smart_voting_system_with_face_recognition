@@ -1,5 +1,6 @@
 import re
-from email_validator import validate_email, EmailNotValidError
+
+from email_validator import validate_email
 
 
 def validate_password(password: str) -> str:
@@ -30,8 +31,7 @@ def validate_national_id(national_id: str) -> bool:
 
 
 from datetime import date, datetime
-import re
-from typing import Tuple, Dict
+from typing import Dict, Tuple
 
 
 class ValidationError(Exception):

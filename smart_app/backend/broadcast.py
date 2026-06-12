@@ -1,7 +1,8 @@
 # broadcast.py - Broadcast functions to avoid circular imports
-from flask_socketio import SocketIO
-from datetime import datetime
 import logging
+from datetime import datetime
+
+from flask_socketio import SocketIO
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ def broadcast_election_update(action, election_data, admin_id=None):
         socketio.emit(
             "election_update",
             update_data,
-            room=f'election_{election_data.get("election_id")}',
+            room=f"election_{election_data.get('election_id')}",
         )
 
         # Also send to admins
@@ -54,7 +55,7 @@ def broadcast_voter_update(action, voter_data, admin_id=None):
 
         # Broadcast to specific voter
         socketio.emit(
-            "voter_update", update_data, room=f'voter_{voter_data.get("voter_id")}'
+            "voter_update", update_data, room=f"voter_{voter_data.get('voter_id')}"
         )
 
         # Broadcast to admins

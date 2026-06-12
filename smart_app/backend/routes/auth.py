@@ -1,21 +1,11 @@
 # smart_app/backend/routes/auth.py
-from flask import Blueprint, request, jsonify, current_app
-from datetime import datetime, timedelta
 import logging
+from datetime import datetime, timedelta
+
 import jwt
-import numpy as np
-import base64
-import io
-from PIL import Image
-from mongo_models import Admin, AuditLog, Voter, FaceEncoding
-import bcrypt
-from services.face_recognition_service import (
-    hybrid_face_service,
-    multi_face_service,
-    knn_face_service,
-    FaceRecognitionResult,
-)
-from services.face_utils import face_utils
+from flask import Blueprint, jsonify, request
+from mongo_models import Admin, AuditLog, FaceEncoding, Voter
+from services.face_recognition_service import FaceRecognitionResult
 
 logger = logging.getLogger(__name__)
 
@@ -173,7 +163,7 @@ def login():
                 jsonify(
                     {
                         "success": False,
-                        "message": f'Account verification pending: {", ".join(pending)}. Please complete verification first.',
+                        "message": f"Account verification pending: {', '.join(pending)}. Please complete verification first.",
                     }
                 ),
                 401,
@@ -439,7 +429,7 @@ def verify_face_hybrid():
         else:
             # Verification failed - TEMPORARY: Still allow login for debugging
             logger.warning(
-                f"⚠️ Face verification failed, but allowing login for debugging"
+                "⚠️ Face verification failed, but allowing login for debugging"
             )
 
             # Prepare voter data

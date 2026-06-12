@@ -1,14 +1,12 @@
 # election.py
-from flask import Blueprint, request, jsonify
-from datetime import datetime, timedelta
 import logging
-from bson import ObjectId
-from functools import wraps
-from flask_cors import cross_origin
 import re
+from datetime import datetime, timedelta
 
+from flask import Blueprint, jsonify, request
+from flask_cors import cross_origin
 # Import from your project structure
-from mongo_models import Voter, Election, Vote, Candidate, AuditLog
+from mongo_models import AuditLog, Candidate, Election, Vote, Voter
 from routes.dashboard import get_authenticated_voter, voter_required
 
 logger = logging.getLogger(__name__)
@@ -25,7 +23,7 @@ def get_elections_for_voter():
     try:
         voter = request.voter
         election_type = request.args.get("type", "all")
-        status = request.args.get("status", "all")
+        request.args.get("status", "all")
 
         elections_data = {
             "upcoming": get_upcoming_elections(voter, election_type),
@@ -594,7 +592,7 @@ def cast_vote_in_election(election_id):
                 400,
             )
 
-        logger.info(f"All checks passed. Creating vote record...")
+        logger.info("All checks passed. Creating vote record...")
 
         # Create vote record with enhanced data
         vote_data = {
@@ -758,7 +756,7 @@ def start_voting_session(election_id):
         print(f"📅 Fixed dates - Start: {voting_start}, End: {voting_end}")
 
         if not voting_start or not voting_end:
-            print(f"❌ Invalid election configuration - missing voting dates")
+            print("❌ Invalid election configuration - missing voting dates")
             print(f"   voting_start: {voting_start}")
             print(f"   voting_end: {voting_end}")
             return (
@@ -770,7 +768,7 @@ def start_voting_session(election_id):
 
         current_time = datetime.utcnow()
 
-        print(f"\n⏰ DATE COMPARISONS:")
+        print("\n⏰ DATE COMPARISONS:")
         print(f"   Current time: {current_time}")
         print(f"   Voting start: {voting_start}")
         print(f"   Voting end: {voting_end}")
@@ -930,7 +928,7 @@ def get_election_results_for_voter(election_id):
         # Check if results are available
         current_time = datetime.utcnow()
         voting_end = election.get("voting_end")
-        results_publish = election.get("results_publish")
+        election.get("results_publish")
 
         # Allow viewing results if voting has ended or admin has published results
         if (
@@ -1271,12 +1269,13 @@ def check_voter_eligibility(voter_id, election_id):
         election_constituency = election.get("constituency", "General")
 
         logger.info(
-            f"Constituency check - Voter: '{voter_constituency}', Election: '{election_constituency}'"
+            f"Constituency check - Voter: '{voter_constituency}', "
+            f"Election: '{election_constituency}'"
         )
 
         # If election has 'General' constituency, allow all voters
         if election_constituency.lower() == "general":
-            logger.info(f"Election has general constituency, allowing all voters")
+            logger.info("Election has general constituency, allowing all voters")
             constituency_match = True
         else:
             constituency_match = check_constituency_match(
@@ -1653,7 +1652,7 @@ def check_voter_eligibility(voter_id, election_id):
 
         # If election has 'General' constituency, allow all voters
         if election_constituency.lower() == "general":
-            logger.info(f"Election has general constituency, allowing all voters")
+            logger.info("Election has general constituency, allowing all voters")
             constituency_match = True
         else:
             constituency_match = check_constituency_match(
@@ -1767,7 +1766,7 @@ def check_constituency_match(voter_constituency, election_constituency):
 def normalize_date(date_value):
     """Normalize date value to datetime object - FIXED FOR MISSING SECONDS"""
     if not date_value:
-        logger.debug(f"normalize_date received empty value")
+        logger.debug("normalize_date received empty value")
         return None
 
     logger.debug(f"normalize_date input: {date_value} (type: {type(date_value)})")
@@ -1829,7 +1828,7 @@ def normalize_date(date_value):
                 result = datetime.strptime(date_str, fmt)
                 logger.debug(f"Successfully parsed with format {fmt}: {result}")
                 return result
-            except ValueError as e:
+            except ValueError:
                 continue
 
         # Try ISO format with timezone

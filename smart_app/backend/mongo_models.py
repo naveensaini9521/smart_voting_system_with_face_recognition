@@ -1,15 +1,14 @@
-from datetime import datetime, date, timedelta
-from venv import logger
-from bson import ObjectId
-from flask import current_app
-from extensions import mongo
+import hashlib
 import random
 import string
-import bcrypt
 import uuid
-import hashlib
-import logging
+from datetime import date, datetime, timedelta
+from venv import logger
+
+import bcrypt
 import numpy as np
+from bson import ObjectId
+from extensions import mongo
 
 
 class MongoBase:
@@ -160,7 +159,7 @@ class Voter(MongoBase):
             password = "".join(
                 random.choices(string.ascii_letters + string.digits, k=8)
             )
-            logger.info(f"Generated random password")
+            logger.info("Generated random password")
 
         # Use bcrypt for password hashing
         try:
@@ -761,7 +760,7 @@ class User(MongoBase):
     def verify_password(cls, user_doc, password):
         """Verify user password with proper bcrypt handling"""
         if not user_doc or "password_hash" not in user_doc:
-            print(f"No password hash found in user document")
+            print("No password hash found in user document")
             return False
 
         try:

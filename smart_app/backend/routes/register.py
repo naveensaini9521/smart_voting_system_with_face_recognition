@@ -1,37 +1,18 @@
 # smart_app/backend/routes/register.py
-from flask import Blueprint, request, jsonify, current_app
-from datetime import datetime, date, timedelta
-import numpy as np
-import base64
-import io
-import os
-from PIL import Image
-import bcrypt
-
 import logging
+import os
 import random
-import string
 import smtplib
-from email.mime.text import MIMEText
+import string
+from datetime import datetime
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
-from mongo_models import (
-    Admin,
-    AuditLog,
-    Voter,
-    OTP,
-    FaceEncoding,
-    IDDocument,
-    calculate_age,
-)
-from routes.auth import verify_token
-from services.face_recognition_service import (
-    hybrid_face_service,
-    multi_face_service,
-    knn_face_service,
-    FaceRecognitionResult,
-)
-from services.face_utils import face_utils
+from flask import Blueprint, jsonify, request
+from mongo_models import OTP, AuditLog, FaceEncoding, Voter, calculate_age
+from services.face_recognition_service import (hybrid_face_service,
+                                               knn_face_service,
+                                               multi_face_service)
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +86,7 @@ def send_voter_credentials(voter_data, voter_id, password):
     <html>
     <body>
         <h2>Voter Registration Successful!</h2>
-        <p>Dear {voter_data['full_name']},</p>
+        <p>Dear {voter_data["full_name"]},</p>
         <p>Your voter registration has been successfully completed.</p>
         <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0;">
             <h3 style="color: #28a745; margin: 0;">Your Voter ID: <strong>{voter_id}</strong></h3>
@@ -204,7 +185,7 @@ def send_otp_registration():
                     }
                 )
 
-        except Exception as e:
+        except Exception:
             # Generate mock OTP for development
             mock_otp = "".join(random.choices("0123456789", k=6))
             return jsonify(
@@ -227,7 +208,7 @@ def send_otp_registration():
                 <h2>Email Verification OTP</h2>
                 <p>Your OTP for email verification is:</p>
                 <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; margin: 10px 0;">
-                    <h1 style="color: #007bff; margin: 0; letter-spacing: 5px;">{otp_record['otp_code']}</h1>
+                    <h1 style="color: #007bff; margin: 0; letter-spacing: 5px;">{otp_record["otp_code"]}</h1>
                 </div>
                 <p>This OTP is valid for 10 minutes.</p>
                 <p>If you didn't request this, please ignore this email.</p>
@@ -365,7 +346,7 @@ def register_voter():
                 jsonify(
                     {
                         "success": False,
-                        "message": f'Missing required fields: {", ".join(missing_fields)}',
+                        "message": f"Missing required fields: {', '.join(missing_fields)}",
                     }
                 ),
                 400,
@@ -576,7 +557,7 @@ def complete_registration(voter_id):
                 jsonify(
                     {
                         "success": False,
-                        "message": f'Complete all verification steps first. Pending: {", ".join(pending)}',
+                        "message": f"Complete all verification steps first. Pending: {', '.join(pending)}",
                     }
                 ),
                 400,
@@ -709,7 +690,7 @@ def register_face(voter_id):
                     action="duplicate_face_attempt",
                     user_id=voter_id,
                     user_type="voter",
-                    details=f"Duplicate face detected for {voter_id} (matches {existing_voter_id} - {similarity*100:.1f}%)",
+                    details=f"Duplicate face detected for {voter_id} (matches {existing_voter_id} - {similarity * 100:.1f}%)",
                     ip_address=request.remote_addr,
                 )
 

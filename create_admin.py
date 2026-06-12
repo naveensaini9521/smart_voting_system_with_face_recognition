@@ -1,8 +1,9 @@
 # create_admin_simple.py
-import sys
 import os
-import bcrypt
+import sys
 from datetime import datetime
+
+import bcrypt
 
 # Add the project root to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

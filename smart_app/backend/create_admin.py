@@ -1,8 +1,9 @@
 # create_admin_simple.py
-import sys
 import os
-import bcrypt
+import sys
 from datetime import datetime
+
+import bcrypt
 
 # Add the project root to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -14,7 +15,6 @@ def create_admin_simple():
 
         # Import pymongo directly
         import pymongo
-        from bson import ObjectId
 
         # Connect to MongoDB
         client = pymongo.MongoClient("localhost", 27017)
@@ -74,9 +74,9 @@ def create_admin_simple():
         result = admins_collection.insert_one(admin_doc)
 
         print("Admin user created successfully!")
-        print(f"   Username: admin")
-        print(f"   Password: admin123")
-        print(f"   Email: admin@votingsystem.com")
+        print("   Username: admin")
+        print("   Password: admin123")
+        print("   Email: admin@votingsystem.com")
         print(f"   MongoDB ID: {result.inserted_id}")
         print(f"   Admin ID: {admin_id}")
 

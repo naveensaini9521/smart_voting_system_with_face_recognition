@@ -1,7 +1,8 @@
 # smart_app/backend/routes/frontend.py
-from flask import Blueprint, send_from_directory, jsonify, request
-import os
 import logging
+import os
+
+from flask import Blueprint, jsonify, request, send_from_directory
 
 logger = logging.getLogger(__name__)
 frontend_bp = Blueprint("frontend", __name__)

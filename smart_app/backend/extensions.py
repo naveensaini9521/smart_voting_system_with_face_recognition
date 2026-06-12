@@ -1,10 +1,10 @@
-from flask_pymongo import PyMongo
+from flask_bcrypt import Bcrypt
+from flask_caching import Cache
+from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_mail import Mail
-from flask_cors import CORS
-from flask_bcrypt import Bcrypt
+from flask_pymongo import PyMongo
 from flask_socketio import SocketIO
-from flask_caching import Cache
 
 mongo = PyMongo()
 jwt = JWTManager()

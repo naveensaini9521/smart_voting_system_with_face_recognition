@@ -1,28 +1,26 @@
-from flask import Flask, jsonify, request
-from flask_cors import CORS
-from flask_jwt_extended import JWTManager
-from flask_session import Session
-from flask_caching import Cache
-import redis
 import os
 from datetime import datetime
-from config import config_map, DevelopmentConfig
-from flask_socketio import SocketIO
-from extensions import mongo, jwt, mail, bcrypt, socketio, cache
+
+import redis
+from config import DevelopmentConfig, config_map
 from create_mongo_collections import create_collections
-from routes.auth import auth_bp
-from routes.voters import voting_bp
-from routes.admin import admin_bp
-from routes.otp import otp_bp
+from dotenv import load_dotenv
+from extensions import bcrypt, cache, jwt, mail, mongo, socketio
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+from flask_session import Session
 from frontend import frontend_bp
-from routes.register import register_bp
-from routes.stats import stats_bp
-from routes.home import home_bp
-from routes.test_mongodb import mongodb_bp
+from routes.admin import admin_bp
+from routes.auth import auth_bp
 from routes.dashboard import dashboard_bp
 from routes.elections import election_bp
+from routes.home import home_bp
+from routes.otp import otp_bp
+from routes.register import register_bp
+from routes.stats import stats_bp
+from routes.test_mongodb import mongodb_bp
+from routes.voters import voting_bp
 from socket_events import register_socket_events
-from dotenv import load_dotenv
 
 load_dotenv()
 

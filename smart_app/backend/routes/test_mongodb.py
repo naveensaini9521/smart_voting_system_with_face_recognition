@@ -1,8 +1,7 @@
-from flask import Blueprint, jsonify
-from extensions import mongo
-from flask import current_app
-from bson import ObjectId
 from datetime import datetime
+
+from extensions import mongo
+from flask import Blueprint, jsonify
 
 mongodb_bp = Blueprint("mongodb", __name__)
 

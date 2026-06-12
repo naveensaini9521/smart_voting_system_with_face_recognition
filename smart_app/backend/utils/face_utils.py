@@ -1,10 +1,11 @@
-import smart_app.backend.utils.face_utils as face_utils
-import cv2
-import numpy as np
 import base64
 import os
 from datetime import datetime
-import json
+
+import cv2
+import numpy as np
+
+import smart_app.backend.utils.face_utils as face_utils
 
 
 class FaceRecognitionSystem:
@@ -40,7 +41,8 @@ class FaceRecognitionSystem:
 
             if len(face_locations) > 1:
                 raise Exception(
-                    "Multiple faces detected. Please provide an image with only one face."
+                    "Multiple faces detected. "
+                    "Please provide an image with only one face."
                 )
 
             # Extract face encodings

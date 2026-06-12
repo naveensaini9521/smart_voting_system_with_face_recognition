@@ -1,8 +1,8 @@
-from flask import Blueprint, request, jsonify
-from extensions import mongo
-from mongo_models import OTP
 import random
 from datetime import datetime, timedelta
+
+from flask import Blueprint, jsonify, request
+from mongo_models import OTP
 
 otp_bp = Blueprint("otp", __name__)
 
@@ -53,7 +53,7 @@ def send_otp():
             200,
         )
 
-    except Exception as e:
+    except Exception:
         return jsonify({"message": "Failed to send OTP"}), 500
 
 
@@ -91,7 +91,7 @@ def verify_otp():
 
         return jsonify({"message": "OTP verified successfully"}), 200
 
-    except Exception as e:
+    except Exception:
         return jsonify({"message": "OTP verification failed"}), 500
 
 
@@ -135,7 +135,7 @@ def resend_otp():
             200,
         )
 
-    except Exception as e:
+    except Exception:
         return jsonify({"message": "Failed to resend OTP"}), 500
 
 
@@ -157,5 +157,5 @@ def cleanup_expired_otps():
             200,
         )
 
-    except Exception as e:
+    except Exception:
         return jsonify({"message": "Failed to cleanup OTPs"}), 500

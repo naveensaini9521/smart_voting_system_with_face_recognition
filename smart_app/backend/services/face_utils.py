@@ -1,9 +1,10 @@
 # smart_app/backend/services/face_utils.py
+import base64
+import logging
+from typing import Dict, List, Optional, Tuple
+
 import cv2
 import numpy as np
-import logging
-import base64
-from typing import List, Tuple, Optional, Dict
 
 # Optional advanced libraries (graceful fallback)
 try:
@@ -273,7 +274,6 @@ class FaceUtils:
             except Exception as e:
                 logger.debug(f"MediaPipe landmarks failed: {e}")
 
-        # Try dlib landmarks (requires face bbox)
         if self.dlib_predictor is not None and face_bbox is not None:
             try:
                 x, y, w, h = face_bbox
@@ -304,9 +304,7 @@ class FaceUtils:
             logger.error(f"Blur score calculation error: {str(e)}")
             return 0.0
 
-    # ------------------------------------------------------------------
     # Thumbnail creation (using improved alignment)
-    # ------------------------------------------------------------------
     def create_face_thumbnail(
         self,
         image_array: np.ndarray,

@@ -1,10 +1,8 @@
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
-from bson import ObjectId
 
-from extensions import mongo
-from mongo_models import Voter, Election, Candidate, Vote
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
+from mongo_models import Candidate, Election, Vote, Voter
 
 voting_bp = Blueprint("voters", __name__)
 

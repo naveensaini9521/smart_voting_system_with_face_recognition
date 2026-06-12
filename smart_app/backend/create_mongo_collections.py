@@ -1,5 +1,5 @@
-from flask import current_app
 from extensions import mongo
+from flask import current_app
 
 
 def create_collections(app):
@@ -55,7 +55,7 @@ def create_collections(app):
             # Create indexes for better performance
             create_indexes(db)
 
-            current_app.logger.info(f"MongoDB initialization complete.")
+            current_app.logger.info("MongoDB initialization complete.")
             current_app.logger.info(f"Created collections: {created_collections}")
             current_app.logger.info(f"Existing collections: {existing_collections}")
 

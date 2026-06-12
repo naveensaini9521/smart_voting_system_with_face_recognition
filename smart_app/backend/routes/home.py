@@ -1,11 +1,9 @@
-from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required
-from datetime import datetime
-from bson import ObjectId
 import random
+from datetime import datetime
 
 from extensions import mongo
-from mongo_models import User, Election, Vote, Voter, SystemStats
+from flask import Blueprint, jsonify, request
+from mongo_models import Election, User, Vote, Voter
 
 home_bp = Blueprint("home", __name__)
 
@@ -290,7 +288,7 @@ def get_stats():
                 },
             }
         )
-    except Exception as e:
+    except Exception:
         # Fallback data if MongoDB is not ready
         return jsonify(
             {
@@ -553,7 +551,7 @@ def submit_contact():
                 "timestamp": datetime.utcnow().isoformat(),
             }
         )
-    except Exception as e:
+    except Exception:
         return (
             jsonify(
                 {
@@ -614,7 +612,7 @@ def subscribe_newsletter():
                 "subscription_date": datetime.utcnow().isoformat(),
             }
         )
-    except Exception as e:
+    except Exception:
         return (
             jsonify(
                 {"success": False, "message": "Failed to subscribe. Please try again."}
@@ -672,7 +670,7 @@ def request_demo():
                 "scheduled_followup": "Within 48 hours",
             }
         )
-    except Exception as e:
+    except Exception:
         return (
             jsonify(
                 {
@@ -695,7 +693,7 @@ def health_check():
         # Get MongoDB stats
         db_stats = mongo.db.command("dbstats")
 
-    except Exception as e:
+    except Exception:
         db_status = "disconnected"
 
     # System checks
