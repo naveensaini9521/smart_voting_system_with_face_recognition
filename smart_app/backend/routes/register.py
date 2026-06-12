@@ -204,7 +204,7 @@ def send_otp_registration():
         sms_sent = False
 
         if email:
-            email_body = f"""
+            email_body = """
             <html>
             <body>
                 <h2>Email Verification OTP</h2>
