@@ -1561,11 +1561,11 @@ def get_active_elections(voter, election_type="all"):
             if voting_start_dt <= current_time <= voting_end_dt and status == "active":
                 active_elections.append(election)
                 logger.info(
-                    f"✅ ACTIVE: {election.get('title')} | Start: {voting_start_dt} | End: {voting_end_dt}"
+                    f"ACTIVE: {election.get('title')} | Start: {voting_start_dt} | End: {voting_end_dt}"
                 )
             else:
                 logger.info(
-                    f"❌ INACTIVE: {election.get('title')} | Start: {voting_start_dt} | End: {voting_end_dt} | Status: {status}"
+                    f"INACTIVE:{election.get('title')} | Start:{voting_start_dt} | End:{voting_end_dt} | Status:{status}"
                 )
 
         logger.info(f"🎯 Final active elections count: {len(active_elections)}")
