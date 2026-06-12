@@ -1,4 +1,3 @@
-# election.py
 import logging
 import re
 from datetime import datetime, timedelta
@@ -24,7 +23,7 @@ def get_elections_for_voter():
     try:
         voter = request.voter
         election_type = request.args.get("type", "all")
-        request.args.get("status", "all")
+        # request.args.get("status", "all")  # not used
 
         elections_data = {
             "upcoming": get_upcoming_elections(voter, election_type),
@@ -191,7 +190,7 @@ def get_upcoming_elections_enhanced():
             "voting_start": {"$gt": datetime.utcnow()},
         }
 
-        elections = Election.find_all(query, sort=[("vouting_start", 1)])
+        elections = Election.find_all(query, sort=[("voting_start", 1)])
 
         enhanced_elections = []
         for election in elections:
@@ -441,9 +440,6 @@ def get_election_candidates(election_id):
         return jsonify({"success": False, "message": "Failed to load candidates"}), 500
 
 
-# In your elections.py - Add session verification to cast_vote_in_election
-
-
 @election_bp.route("/elections/<election_id>/vote", methods=["POST"])
 @cross_origin()
 def cast_vote_in_election(election_id):
@@ -505,7 +501,6 @@ def cast_vote_in_election(election_id):
                 400,
             )
 
-        # FIXED: Now comparing datetime objects instead of datetime vs string
         if current_time < voting_start:
             time_remaining = voting_start - current_time
             hours_remaining = time_remaining.total_seconds() / 3600
@@ -732,7 +727,7 @@ def start_voting_session(election_id):
                         return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
                     else:
                         return datetime.fromisoformat(date_str)
-                except:
+                except Exception:
                     try:
                         # Try datetime.strptime with common formats
                         formats = [
@@ -745,9 +740,9 @@ def start_voting_session(election_id):
                         for fmt in formats:
                             try:
                                 return datetime.strptime(date_str, fmt)
-                            except:
+                            except Exception:
                                 continue
-                    except:
+                    except Exception:
                         pass
             return None
 
@@ -929,7 +924,7 @@ def get_election_results_for_voter(election_id):
         # Check if results are available
         current_time = datetime.utcnow()
         voting_end = election.get("voting_end")
-        election.get("results_publish")
+        # election.get("results_publish")  # unused
 
         # Allow viewing results if voting has ended or admin has published results
         if (
@@ -1194,15 +1189,16 @@ def fix_date_parsing(date_value):
             if "Z" in date_str:
                 date_str = date_str.replace("Z", "")
             return datetime.fromisoformat(date_str)
-        except:
-            pass
+        except Exception as e:
+            logger.error(f"Failed to parse MongoDB date: {e}")
+            return None
 
     # Handle string dates
     if isinstance(date_value, str):
         try:
             # Try ISO format first
             return datetime.fromisoformat(date_value.replace("Z", "+00:00"))
-        except:
+        except Exception:
             pass
 
         try:
@@ -1220,9 +1216,9 @@ def fix_date_parsing(date_value):
             for fmt in formats:
                 try:
                     return datetime.strptime(date_value, fmt)
-                except:
+                except Exception:
                     continue
-        except:
+        except Exception:
             pass
 
     return None
@@ -1289,19 +1285,42 @@ def check_voter_eligibility(voter_id, election_id):
                 )
                 return False
 
-        # Check if voting period is active
+        # Check if voting period is active - FIX: Use normalize_date
         current_time = datetime.utcnow()
-        voting_start = election.get("voting_start")
-        voting_end = election.get("voting_end")
+        voting_start_raw = election.get("voting_start")
+        voting_end_raw = election.get("voting_end")
 
-        if voting_start and voting_end:
-            if current_time < voting_start:
+        logger.info(
+            f"📅 Date debug - voting_start_raw: {voting_start_raw} (type: {type(voting_start_raw)})"
+        )
+        logger.info(
+            f"📅 Date debug - voting_end_raw: {voting_end_raw} (type: {type(voting_end_raw)})"
+        )
+
+        if voting_start_raw and voting_end_raw:
+            voting_start = normalize_date(voting_start_raw)
+            voting_end = normalize_date(voting_end_raw)
+
+            logger.info(
+                f"📅 Normalized dates - voting_start: {voting_start} (type: {type(voting_start)})"
+            )
+            logger.info(
+                f"📅 Normalized dates - voting_end: {voting_end} (type: {type(voting_end)})"
+            )
+
+            if voting_start and voting_end:
+                if current_time < voting_start:
+                    logger.warning(
+                        f"Voting has not started yet: {voting_start} > {current_time}"
+                    )
+                    return False
+                if current_time > voting_end:
+                    logger.warning(f"Voting has ended: {voting_end} < {current_time}")
+                    return False
+            else:
                 logger.warning(
-                    f"Voting has not started yet: {voting_start} > {current_time}"
+                    f"Could not parse election dates: start={voting_start}, end={voting_end}"
                 )
-                return False
-            if current_time > voting_end:
-                logger.warning(f"Voting has ended: {voting_end} < {current_time}")
                 return False
         else:
             logger.warning("Election missing voting dates")
@@ -1335,14 +1354,123 @@ def check_constituency_match(voter_constituency, election_constituency):
     if voter_constituency == election_constituency:
         return True
 
-    # Contains match
-    if (
-        voter_constituency in election_constituency
-        or election_constituency in voter_constituency
-    ):
+    # Contains match (election constituency in voter constituency)
+    if election_constituency in voter_constituency:
+        logger.info(
+            f"✅ Flexible match: '{election_constituency}' found in '{voter_constituency}'"
+        )
         return True
 
+    # Check for common patterns like "City, State" vs "City"
+    # Extract just the city name from "City, State" format
+    if "," in voter_constituency:
+        voter_city = voter_constituency.split(",")[0].strip()
+        if voter_city == election_constituency:
+            logger.info(f"✅ City match: '{voter_city}' == '{election_constituency}'")
+            return True
+
+    # Also try matching voter constituency in election constituency
+    if voter_constituency in election_constituency:
+        logger.info(
+            f"✅ Reverse contains: '{voter_constituency}' found in '{election_constituency}'"
+        )
+        return True
+
+    logger.warning(
+        f"❌ No constituency match: '{voter_constituency}' vs '{election_constituency}'"
+    )
     return False
+
+
+def normalize_date(date_value):
+    """Normalize date value to datetime object - FIXED FOR MISSING SECONDS"""
+    if not date_value:
+        logger.debug("normalize_date received empty value")
+        return None
+
+    logger.debug(f"normalize_date input: {date_value} (type: {type(date_value)})")
+
+    # Already datetime object
+    if isinstance(date_value, datetime):
+        return date_value
+
+    # MongoDB date format
+    if isinstance(date_value, dict) and "$date" in date_value:
+        date_str = date_value["$date"]
+        logger.debug(f"Processing MongoDB date: {date_str}")
+        try:
+            # Remove milliseconds if present
+            if "." in date_str:
+                date_str = date_str.split(".")[0] + "Z"
+
+            # Handle with timezone
+            if "Z" in date_str:
+                return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+            else:
+                return datetime.fromisoformat(date_str)
+        except Exception as e:
+            logger.error(f"Failed to parse MongoDB date {date_str}: {str(e)}")
+            return None
+
+    # String date - FIX FOR MISSING SECONDS
+    if isinstance(date_value, str):
+        logger.debug(f"Processing string date: {date_value}")
+
+        # Clean the string
+        date_str = date_value.strip()
+
+        # FIX: Add missing seconds if format is YYYY-MM-DDTHH:MM
+        if re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$", date_str):
+            date_str = date_str + ":00"  # Add seconds
+            logger.debug(f"Added missing seconds: {date_str}")
+        elif re.match(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$", date_str):
+            date_str = date_str + ":00"  # Add seconds for space separator
+            logger.debug(f"Added missing seconds: {date_str}")
+
+        # Try multiple formats
+        formats = [
+            "%Y-%m-%dT%H:%M:%S.%fZ",  # 2025-12-08T18:35:51.035824Z
+            "%Y-%m-%dT%H:%M:%SZ",  # 2025-12-08T18:35:51Z
+            "%Y-%m-%dT%H:%M:%S",  # 2025-12-08T18:35:51
+            "%Y-%m-%d %H:%M:%S",  # 2025-12-08 18:35:51
+            "%Y-%m-%dT%H:%M",  # 2025-12-08T18:35 (handle missing seconds)
+            "%Y-%m-%d %H:%M",  # 2025-12-08 18:35 (handle missing seconds)
+            "%Y-%m-%d",  # 2025-12-08
+            "%d/%m/%Y %H:%M:%S",  # 08/12/2025 18:35:51
+            "%d/%m/%Y",  # 08/12/2025
+            "%m/%d/%Y %H:%M:%S",  # 12/08/2025 18:35:51
+            "%m/%d/%Y",  # 12/08/2025
+        ]
+
+        for fmt in formats:
+            try:
+                result = datetime.strptime(date_str, fmt)
+                logger.debug(f"Successfully parsed with format {fmt}: {result}")
+                return result
+            except ValueError:
+                continue
+
+        # Try ISO format with timezone
+        try:
+            result = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+            logger.debug(f"Successfully parsed with fromisoformat: {result}")
+            return result
+        except Exception:
+            pass
+
+        logger.error(f"Could not parse date string: {date_str}")
+        return None
+
+    # Integer timestamp (Unix timestamp)
+    if isinstance(date_value, (int, float)):
+        try:
+            return datetime.fromtimestamp(date_value)
+        except Exception as e:
+            logger.error(f"Failed to parse timestamp {date_value}: {e}")
+            return None
+
+    logger.error(f"Unsupported date format: {type(date_value)} = {date_value}")
+    return None
 
 
 def get_upcoming_elections(voter, election_type="all"):
@@ -1604,251 +1732,3 @@ def get_upcoming_elections_count():
     except Exception as e:
         logger.error(f"Error counting upcoming elections: {str(e)}")
         return 0
-
-
-def check_voter_eligibility(voter_id, election_id):
-    """Check if voter is eligible to vote in election"""
-    try:
-        logger.info(
-            f"Checking eligibility for voter {voter_id} in election {election_id}"
-        )
-
-        voter = Voter.find_by_voter_id(voter_id)
-        election = Election.find_by_election_id(election_id)
-
-        if not voter:
-            logger.error(f"Voter {voter_id} not found")
-            return False
-
-        if not election:
-            logger.error(f"Election {election_id} not found")
-            return False
-
-        # Check if voter is active
-        if not voter.get("is_active", False):
-            logger.warning(f"Voter {voter_id} is not active")
-            return False
-
-        # Verify required identity verifications
-        required_verifications = ["email_verified", "phone_verified"]
-        missing_verifications = []
-
-        for verification in required_verifications:
-            if not voter.get(verification, False):
-                missing_verifications.append(verification)
-
-        if missing_verifications:
-            logger.warning(
-                f"Voter {voter_id} missing verifications: {missing_verifications}"
-            )
-            return False
-
-        # Check constituency matching
-        voter_constituency = voter.get("constituency", "General")
-        election_constituency = election.get("constituency", "General")
-
-        logger.info(
-            f"Constituency check - Voter: '{voter_constituency}', Election: '{election_constituency}'"
-        )
-
-        # If election has 'General' constituency, allow all voters
-        if election_constituency.lower() == "general":
-            logger.info("Election has general constituency, allowing all voters")
-            constituency_match = True
-        else:
-            constituency_match = check_constituency_match(
-                voter_constituency, election_constituency
-            )
-
-            if not constituency_match:
-                logger.warning(
-                    f"Voter {voter_id} constituency mismatch: '{voter_constituency}' vs '{election_constituency}'"
-                )
-                return False
-
-        # Check if voting period is active - FIX: Use normalize_date
-        current_time = datetime.utcnow()
-        voting_start_raw = election.get("voting_start")
-        voting_end_raw = election.get("voting_end")
-
-        logger.info(
-            f"📅 Date debug - voting_start_raw: {voting_start_raw} (type: {type(voting_start_raw)})"
-        )
-        logger.info(
-            f"📅 Date debug - voting_end_raw: {voting_end_raw} (type: {type(voting_end_raw)})"
-        )
-
-        if voting_start_raw and voting_end_raw:
-            # FIX: Use normalize_date to convert to datetime objects
-            voting_start = normalize_date(voting_start_raw)
-            voting_end = normalize_date(voting_end_raw)
-
-            logger.info(
-                f"📅 Normalized dates - voting_start: {voting_start} (type: {type(voting_start)})"
-            )
-            logger.info(
-                f"📅 Normalized dates - voting_end: {voting_end} (type: {type(voting_end)})"
-            )
-
-            if voting_start and voting_end:
-                if current_time < voting_start:
-                    logger.warning(
-                        f"Voting has not started yet: {voting_start} > {current_time}"
-                    )
-                    return False
-                if current_time > voting_end:
-                    logger.warning(f"Voting has ended: {voting_end} < {current_time}")
-                    return False
-            else:
-                logger.warning(
-                    f"Could not parse election dates: start={voting_start}, end={voting_end}"
-                )
-                return False
-        else:
-            logger.warning("Election missing voting dates")
-            return False
-
-        # Check if already voted
-        if Vote.has_voted(election_id, voter_id):
-            logger.warning(f"Voter {voter_id} already voted in this election")
-            return False
-
-        logger.info(f"Voter {voter_id} is ELIGIBLE for election {election_id}")
-        return True
-
-    except Exception as e:
-        logger.error(f"Error checking voter eligibility: {str(e)}")
-        import traceback
-
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        return False
-
-
-def check_constituency_match(voter_constituency, election_constituency):
-    """Flexible constituency matching"""
-    if not voter_constituency or not election_constituency:
-        return True
-
-    voter_constituency = str(voter_constituency).lower().strip()
-    election_constituency = str(election_constituency).lower().strip()
-
-    # Exact match
-    if voter_constituency == election_constituency:
-        return True
-
-    # Contains match (election constituency in voter constituency)
-    if election_constituency in voter_constituency:
-        logger.info(
-            f"✅ Flexible match: '{election_constituency}' found in '{voter_constituency}'"
-        )
-        return True
-
-    # Check for common patterns like "City, State" vs "City"
-    # Extract just the city name from "City, State" format
-    if "," in voter_constituency:
-        voter_city = voter_constituency.split(",")[0].strip()
-        if voter_city == election_constituency:
-            logger.info(f"✅ City match: '{voter_city}' == '{election_constituency}'")
-            return True
-
-    # Also try matching voter constituency in election constituency
-    if voter_constituency in election_constituency:
-        logger.info(
-            f"✅ Reverse contains: '{voter_constituency}' found in '{election_constituency}'"
-        )
-        return True
-
-    logger.warning(
-        f"❌ No constituency match: '{voter_constituency}' vs '{election_constituency}'"
-    )
-    return False
-
-
-def normalize_date(date_value):
-    """Normalize date value to datetime object - FIXED FOR MISSING SECONDS"""
-    if not date_value:
-        logger.debug("normalize_date received empty value")
-        return None
-
-    logger.debug(f"normalize_date input: {date_value} (type: {type(date_value)})")
-
-    # Already datetime object
-    if isinstance(date_value, datetime):
-        return date_value
-
-    # MongoDB date format
-    if isinstance(date_value, dict) and "$date" in date_value:
-        date_str = date_value["$date"]
-        logger.debug(f"Processing MongoDB date: {date_str}")
-        try:
-            # Remove milliseconds if present
-            if "." in date_str:
-                date_str = date_str.split(".")[0] + "Z"
-
-            # Handle with timezone
-            if "Z" in date_str:
-                return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-            else:
-                return datetime.fromisoformat(date_str)
-        except Exception as e:
-            logger.error(f"Failed to parse MongoDB date {date_str}: {str(e)}")
-            return None
-
-    # String date - FIX FOR MISSING SECONDS
-    if isinstance(date_value, str):
-        logger.debug(f"Processing string date: {date_value}")
-
-        # Clean the string
-        date_str = date_value.strip()
-
-        # FIX: Add missing seconds if format is YYYY-MM-DDTHH:MM
-        if re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$", date_str):
-            date_str = date_str + ":00"  # Add seconds
-            logger.debug(f"Added missing seconds: {date_str}")
-        elif re.match(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$", date_str):
-            date_str = date_str + ":00"  # Add seconds for space separator
-            logger.debug(f"Added missing seconds: {date_str}")
-
-        # Try multiple formats
-        formats = [
-            "%Y-%m-%dT%H:%M:%S.%fZ",  # 2025-12-08T18:35:51.035824Z
-            "%Y-%m-%dT%H:%M:%SZ",  # 2025-12-08T18:35:51Z
-            "%Y-%m-%dT%H:%M:%S",  # 2025-12-08T18:35:51
-            "%Y-%m-%d %H:%M:%S",  # 2025-12-08 18:35:51
-            "%Y-%m-%dT%H:%M",  # 2025-12-08T18:35 (NEW - handle missing seconds)
-            "%Y-%m-%d %H:%M",  # 2025-12-08 18:35 (NEW - handle missing seconds)
-            "%Y-%m-%d",  # 2025-12-08
-            "%d/%m/%Y %H:%M:%S",  # 08/12/2025 18:35:51
-            "%d/%m/%Y",  # 08/12/2025
-            "%m/%d/%Y %H:%M:%S",  # 12/08/2025 18:35:51
-            "%m/%d/%Y",  # 12/08/2025
-        ]
-
-        for fmt in formats:
-            try:
-                result = datetime.strptime(date_str, fmt)
-                logger.debug(f"Successfully parsed with format {fmt}: {result}")
-                return result
-            except ValueError:
-                continue
-
-        # Try ISO format with timezone
-        try:
-            result = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-            logger.debug(f"Successfully parsed with fromisoformat: {result}")
-            return result
-        except:
-            pass
-
-        logger.error(f"Could not parse date string: {date_str}")
-        return None
-
-    # Integer timestamp (Unix timestamp)
-    if isinstance(date_value, (int, float)):
-        try:
-            return datetime.fromtimestamp(date_value)
-        except:
-            return None
-
-    logger.error(f"Unsupported date format: {type(date_value)} = {date_value}")
-    return None
