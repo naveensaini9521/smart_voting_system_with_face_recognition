@@ -75,6 +75,13 @@ pip install -r requirements.txt
 python run.py
 ```
 
+### 6. Docker compose up 
+
+```
+$ docker compose up --build -d
+```
+
+
 ## 1️⃣ Backend Setup (Flask)
 
 Open a terminal and navigate to the backend folder:

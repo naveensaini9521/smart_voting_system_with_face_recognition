@@ -31,7 +31,7 @@ pipeline {
             }
         }
 
-        stage('Black Validation') {
+        stage('Black Formatting validation') {
             steps {
                 sh '''
                 . .venv/bin/activate
@@ -43,7 +43,7 @@ pipeline {
             }
         }
         
-        stage('Flake8 Linting') {
+        stage('Flake8 Linting Validation') {
             steps {
                 sh '''
                 . .venv/bin/activate
