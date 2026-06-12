@@ -475,7 +475,7 @@ class MultiMethodFaceService:
                 aligned = face_utils.align_face(image_array, face_bbox)
                 if aligned is not None:
                     alignment_score = 0.9  # placeholder
-            except:
+            except Exception as e:
                 pass
 
             quality = (

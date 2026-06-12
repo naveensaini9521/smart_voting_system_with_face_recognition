@@ -125,10 +125,10 @@ class FaceUtils:
         try:
             if len(image_array.shape) == 3:
                 lab = cv2.cvtColor(image_array, cv2.COLOR_RGB2LAB)
-                l, a, b = cv2.split(lab)
+                lightness_channel, a, b = cv2.split(lab)  # renamed from 'l'
                 clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
-                l = clahe.apply(l)
-                lab = cv2.merge([l, a, b])
+                lightness_channel = clahe.apply(lightness_channel)
+                lab = cv2.merge([lightness_channel, a, b])
                 enhanced = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
             else:
                 clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))

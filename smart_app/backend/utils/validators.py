@@ -1,6 +1,8 @@
 import re
 
-from email_validator import validate_email
+# from email_validator import validate_email
+from datetime import date, datetime
+from typing import Dict, Tuple
 
 
 def validate_password(password: str) -> str:
@@ -28,10 +30,6 @@ def validate_national_id(national_id: str) -> bool:
     if not national_id or len(national_id) < 5:
         return False
     return national_id.isalnum()
-
-
-from datetime import date, datetime
-from typing import Dict, Tuple
 
 
 class ValidationError(Exception):
