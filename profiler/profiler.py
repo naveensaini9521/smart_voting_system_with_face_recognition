@@ -1,5 +1,6 @@
 import cProfile
 import pstats
+
 from smart_app.backend.run import app
 
 

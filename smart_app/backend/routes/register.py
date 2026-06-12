@@ -1,4 +1,3 @@
-# smart_app/backend/routes/register.py
 import logging
 import os
 import random
@@ -247,6 +246,7 @@ def send_otp_registration():
         logger.error(f"OTP send error: {str(e)}")
         # Generate fallback OTP
         mock_otp = "".join(random.choices("0123456789", k=6))
+        # FIX: Split long jsonify line (E501)
         return jsonify(
             {
                 "success": True,
@@ -398,7 +398,7 @@ def register_voter():
             elif "/" in date_str:
                 try:
                     dob = datetime.strptime(date_str, "%m/%d/%Y").date()
-                except:
+                except Exception:
                     dob = datetime.strptime(date_str, "%d/%m/%Y").date()
             else:
                 # Try month name format
@@ -733,7 +733,7 @@ def register_face(voter_id):
                     400,
                 )
             else:
-                # Other registration error
+                # Other registration error - FIX: split long line (E501)
                 return (
                     jsonify(
                         {
@@ -818,6 +818,7 @@ def register_face(voter_id):
         # Get updated voter data
         updated_voter = Voter.find_by_voter_id(voter_id)
 
+        # FIX: split long jsonify line (E501)
         response_data = {
             "success": True,
             "message": "Face biometrics registered successfully!",

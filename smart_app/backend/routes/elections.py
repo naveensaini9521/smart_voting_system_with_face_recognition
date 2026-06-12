@@ -1563,10 +1563,10 @@ def get_active_elections(voter, election_type="all"):
                 logger.info(
                     f"ACTIVE: {election.get('title')} | Start: {voting_start_dt} | End: {voting_end_dt}"
                 )
-            else:
-                logger.info(
-                    f"INACTIVE:{election.get('title')} | Start:{voting_start_dt} | End:{voting_end_dt} | Status:{status}"
-                )
+            logger.info(
+                f"INACTIVE:{election.get('title')} | Start:{voting_start_dt} | "
+                f"End:{voting_end_dt} | Status:{status}"
+            )
 
         logger.info(f"🎯 Final active elections count: {len(active_elections)}")
 

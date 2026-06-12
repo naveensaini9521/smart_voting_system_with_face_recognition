@@ -30,7 +30,10 @@ def get_system_info():
             "system_info": {
                 "name": "Smart Voting System",
                 "version": "1.0.0",
-                "description": "Final Year Project - Secure Digital Voting Platform with Facial Recognition",
+                "description": (
+                    "Final Year Project - Secure Digital Voting Platform "
+                    "with Facial Recognition"
+                ),
                 "developers": ["Your Name", "Team Member 2"],
                 "institution": "Your University",
                 "department": "Computer Science",
@@ -57,7 +60,10 @@ def get_features():
             "id": 1,
             "icon": "👤",
             "title": "Face Recognition",
-            "description": "Advanced facial recognition technology for secure voter identity verification",
+            "description": (
+                "Advanced facial recognition technology for secure "
+                "voter identity verification"
+            ),
             "color": "#667eea",
             "status": "active",
             "category": "authentication",
@@ -67,7 +73,10 @@ def get_features():
             "id": 2,
             "icon": "🔒",
             "title": "Secure Voting",
-            "description": "End-to-end encrypted voting process with blockchain-inspired security",
+            "description": (
+                "End-to-end encrypted voting process with "
+                "blockchain-inspired security"
+            ),
             "color": "#4ecdc4",
             "status": "active",
             "category": "security",
@@ -77,7 +86,10 @@ def get_features():
             "id": 3,
             "icon": "⚡",
             "title": "Fast Process",
-            "description": "Complete voting process in under 2 minutes with real-time verification",
+            "description": (
+                "Complete voting process in under 2 minutes "
+                "with real-time verification"
+            ),
             "color": "#ff6b6b",
             "status": "active",
             "category": "performance",
@@ -87,7 +99,9 @@ def get_features():
             "id": 4,
             "icon": "📊",
             "title": "Live Results",
-            "description": "Real-time voting results and comprehensive analytics dashboard",
+            "description": (
+                "Real-time voting results and comprehensive analytics dashboard"
+            ),
             "color": "#764ba2",
             "status": "active",
             "category": "analytics",
@@ -107,7 +121,9 @@ def get_features():
             "id": 6,
             "icon": "🔍",
             "title": "Audit Trail",
-            "description": "Complete transaction history for transparency and verification",
+            "description": (
+                "Complete transaction history for transparency and verification"
+            ),
             "color": "#4facfe",
             "status": "active",
             "category": "transparency",
@@ -132,7 +148,11 @@ def get_testimonials():
             "id": 1,
             "name": "Sarah Johnson",
             "role": "Computer Science Student",
-            "content": "The face recognition feature works incredibly well! Very impressive implementation for a final year project. The UI is smooth and intuitive.",
+            "content": (
+                "The face recognition feature works incredibly well! "
+                "Very impressive implementation for a final year project. "
+                "The UI is smooth and intuitive."
+            ),
             "avatar": "👩‍🎓",
             "rating": 5,
             "date": "2024-01-15",
@@ -143,7 +163,11 @@ def get_testimonials():
             "id": 2,
             "name": "Mike Chen",
             "role": "Software Engineering Student",
-            "content": "Love the modern UI and smooth voting process. The security features give me confidence in the system. Great work!",
+            "content": (
+                "Love the modern UI and smooth voting process. "
+                "The security features give me confidence in the system. "
+                "Great work!"
+            ),
             "avatar": "👨‍💻",
             "rating": 5,
             "date": "2024-01-10",
@@ -154,7 +178,11 @@ def get_testimonials():
             "id": 3,
             "name": "Dr. Emily Rodriguez",
             "role": "Project Guide & Professor",
-            "content": "Excellent implementation of facial recognition and secure voting mechanisms. A standout final year project that demonstrates real technical expertise!",
+            "content": (
+                "Excellent implementation of facial recognition and secure "
+                "voting mechanisms. A standout final year project that "
+                "demonstrates real technical expertise!"
+            ),
             "avatar": "👩‍🏫",
             "rating": 5,
             "date": "2024-01-08",
@@ -165,7 +193,11 @@ def get_testimonials():
             "id": 4,
             "name": "Alex Thompson",
             "role": "Student Voter",
-            "content": "So much easier than traditional voting. The interface is intuitive and the process is quick. Face recognition worked perfectly!",
+            "content": (
+                "So much easier than traditional voting. The interface is "
+                "intuitive and the process is quick. Face recognition "
+                "worked perfectly!"
+            ),
             "avatar": "👨‍🎓",
             "rating": 4,
             "date": "2024-01-12",
@@ -176,7 +208,11 @@ def get_testimonials():
             "id": 5,
             "name": "Prof. David Wilson",
             "role": "Department Head",
-            "content": "Impressive integration of multiple technologies. This project demonstrates real-world application potential and technical excellence.",
+            "content": (
+                "Impressive integration of multiple technologies. "
+                "This project demonstrates real-world application potential "
+                "and technical excellence."
+            ),
             "avatar": "👨‍🏫",
             "rating": 5,
             "date": "2024-01-05",
@@ -187,7 +223,10 @@ def get_testimonials():
             "id": 6,
             "name": "Lisa Park",
             "role": "Student Ambassador",
-            "content": "The demo was smooth and professional. Great work on making complex technology accessible and user-friendly.",
+            "content": (
+                "The demo was smooth and professional. Great work on making "
+                "complex technology accessible and user-friendly."
+            ),
             "avatar": "👩‍🎓",
             "rating": 5,
             "date": "2024-01-14",
@@ -268,9 +307,9 @@ def get_stats():
                     "total_elections": total_elections,
                     "active_elections": active_elections,
                     "completed_elections": completed_elections,
-                    "upcoming_elections": total_elections
-                    - active_elections
-                    - completed_elections,
+                    "upcoming_elections": (
+                        total_elections - active_elections - completed_elections
+                    ),
                     "total_votes": total_votes,
                     "new_users_today": new_users_today,
                     "votes_today": votes_today,
@@ -370,7 +409,7 @@ def get_technologies():
             "name": "React.js",
             "icon": "⚛️",
             "category": "frontend",
-            "description": "Modern frontend framework for building user interfaces",
+            "description": ("Modern frontend framework for building user interfaces"),
             "purpose": "User Interface",
             "version": "18.x",
         },
@@ -378,7 +417,7 @@ def get_technologies():
             "name": "Flask",
             "icon": "🐍",
             "category": "backend",
-            "description": "Lightweight Python web framework for API development",
+            "description": ("Lightweight Python web framework for API development"),
             "purpose": "Backend API",
             "version": "2.3.x",
         },
@@ -386,7 +425,7 @@ def get_technologies():
             "name": "MongoDB",
             "icon": "🍃",
             "category": "database",
-            "description": "NoSQL database for flexible data storage and management",
+            "description": ("NoSQL database for flexible data storage and management"),
             "purpose": "Data Storage",
             "version": "6.x",
         },
@@ -394,7 +433,7 @@ def get_technologies():
             "name": "Face Recognition",
             "icon": "👁️",
             "category": "ai_ml",
-            "description": "Computer vision algorithms for facial authentication",
+            "description": ("Computer vision algorithms for facial authentication"),
             "purpose": "Identity Verification",
             "version": "1.3.x",
         },
@@ -410,7 +449,7 @@ def get_technologies():
             "name": "JWT",
             "icon": "🔐",
             "category": "security",
-            "description": "JSON Web Tokens for secure authentication",
+            "description": ("JSON Web Tokens for secure authentication"),
             "purpose": "Authentication",
             "version": "4.5.x",
         },
@@ -431,56 +470,89 @@ def get_faqs():
         {
             "id": 1,
             "question": "Is this a real voting system?",
-            "answer": "No, this is a prototype developed as a final year project for educational purposes only. It demonstrates the potential of digital voting systems with facial recognition technology.",
+            "answer": (
+                "No, this is a prototype developed as a final year project for "
+                "educational purposes only. It demonstrates the potential of "
+                "digital voting systems with facial recognition technology."
+            ),
             "category": "general",
             "popular": True,
         },
         {
             "id": 2,
             "question": "How does the face recognition work?",
-            "answer": "We use computer vision algorithms to detect and verify faces from webcam images. The system captures facial features and matches them against registered voter profiles for secure authentication.",
+            "answer": (
+                "We use computer vision algorithms to detect and verify faces "
+                "from webcam images. The system captures facial features and "
+                "matches them against registered voter profiles for secure "
+                "authentication."
+            ),
             "category": "technology",
             "popular": True,
         },
         {
             "id": 3,
             "question": "Can I use this code for my project?",
-            "answer": "Yes, this project is open for educational purposes. Feel free to learn from the implementation and adapt it for your academic projects. Please give proper attribution.",
+            "answer": (
+                "Yes, this project is open for educational purposes. Feel free to "
+                "learn from the implementation and adapt it for your academic "
+                "projects. Please give proper attribution."
+            ),
             "category": "usage",
             "popular": True,
         },
         {
             "id": 4,
             "question": "What technologies are used in this project?",
-            "answer": "The project uses React.js for frontend, Flask for backend, MongoDB for database, Face Recognition API for facial authentication, Bootstrap for styling, and JWT for security.",
+            "answer": (
+                "The project uses React.js for frontend, Flask for backend, "
+                "MongoDB for database, Face Recognition API for facial "
+                "authentication, Bootstrap for styling, and JWT for security."
+            ),
             "category": "technology",
             "popular": False,
         },
         {
             "id": 5,
             "question": "Is my data secure?",
-            "answer": "In this demo version, basic security measures are implemented including encryption, secure authentication, and data protection. For production use, additional security layers would be required.",
+            "answer": (
+                "In this demo version, basic security measures are implemented "
+                "including encryption, secure authentication, and data protection. "
+                "For production use, additional security layers would be required."
+            ),
             "category": "security",
             "popular": False,
         },
         {
             "id": 6,
             "question": "How can I test the system?",
-            "answer": "You can register as a new user, complete the face registration process, and participate in demo elections to experience the complete voting workflow from start to finish.",
+            "answer": (
+                "You can register as a new user, complete the face registration "
+                "process, and participate in demo elections to experience the "
+                "complete voting workflow from start to finish."
+            ),
             "category": "usage",
             "popular": True,
         },
         {
             "id": 7,
             "question": "What happens if face recognition fails?",
-            "answer": "The system provides multiple verification attempts and fallback authentication methods. In case of persistent failure, admin assistance can be requested.",
+            "answer": (
+                "The system provides multiple verification attempts and fallback "
+                "authentication methods. In case of persistent failure, admin "
+                "assistance can be requested."
+            ),
             "category": "troubleshooting",
             "popular": False,
         },
         {
             "id": 8,
             "question": "Can I see live voting results?",
-            "answer": "Yes, the system provides real-time voting results and analytics for completed elections, accessible to authorized users and administrators.",
+            "answer": (
+                "Yes, the system provides real-time voting results and analytics "
+                "for completed elections, accessible to authorized users and "
+                "administrators."
+            ),
             "category": "features",
             "popular": False,
         },
@@ -546,8 +618,12 @@ def submit_contact():
         return jsonify(
             {
                 "success": True,
-                "message": "Thank you for your message! We will get back to you soon.",
-                "submission_id": f"CONTACT_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+                "message": (
+                    "Thank you for your message! We will get back to you soon."
+                ),
+                "submission_id": (
+                    f"CONTACT_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+                ),
                 "timestamp": datetime.utcnow().isoformat(),
             }
         )
@@ -607,7 +683,10 @@ def subscribe_newsletter():
         return jsonify(
             {
                 "success": True,
-                "message": "Successfully subscribed to newsletter! You will receive updates about the project.",
+                "message": (
+                    "Successfully subscribed to newsletter! You will receive "
+                    "updates about the project."
+                ),
                 "email": email,
                 "subscription_date": datetime.utcnow().isoformat(),
             }
@@ -665,7 +744,10 @@ def request_demo():
         return jsonify(
             {
                 "success": True,
-                "message": "Demo request received! We will contact you to schedule a demonstration.",
+                "message": (
+                    "Demo request received! We will contact you to schedule "
+                    "a demonstration."
+                ),
                 "request_id": f"DEMO_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
                 "scheduled_followup": "Within 48 hours",
             }
@@ -738,7 +820,10 @@ def get_project_info():
             "success": True,
             "project": {
                 "title": "Smart Voting System with Face Recognition",
-                "description": "A secure digital voting platform implementing facial recognition technology for voter authentication",
+                "description": (
+                    "A secure digital voting platform implementing facial "
+                    "recognition technology for voter authentication"
+                ),
                 "academic_year": "2024",
                 "course": "Final Year Project - Computer Science",
                 "team_members": [
@@ -817,7 +902,10 @@ def get_database_stats():
     except Exception as e:
         return (
             jsonify(
-                {"success": False, "message": f"Failed to get database stats: {str(e)}"}
+                {
+                    "success": False,
+                    "message": f"Failed to get database stats: {str(e)}",
+                }
             ),
             500,
         )
