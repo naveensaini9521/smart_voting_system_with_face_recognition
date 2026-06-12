@@ -28,7 +28,7 @@ class MongoBase:
         if isinstance(doc_id, str):
             try:
                 doc_id = ObjectId(doc_id)
-            except Exception as e:
+            except Exception:
                 return None
         return cls.get_collection().find_one({"_id": doc_id})
 

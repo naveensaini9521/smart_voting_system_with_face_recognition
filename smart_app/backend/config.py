@@ -68,12 +68,12 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-
     MONGO_URI = os.getenv(
         "MONGO_URI",
         (
-            f"mongodb://{Config.MONGO_USERNAME}:{Config.MONGO_PASSWORD}@{Config.MONGO_HOST}:{Config.MONGO_PORT}/"
-            f"smart_voting_dev?authSource=admin&retryWrites=true&w=majority"
+            f"mongodb://{Config.MONGO_USERNAME}:{Config.MONGO_PASSWORD}@"
+            f"{Config.MONGO_HOST}:{Config.MONGO_PORT}/smart_voting_dev?"
+            f"authSource=admin&retryWrites=true&w=majority"
         ),
     )
 
@@ -83,8 +83,9 @@ class ProductionConfig(Config):
     MONGO_URI = os.getenv(
         "MONGO_URI",
         (
-            f"mongodb://{Config.MONGO_USERNAME}:{Config.MONGO_PASSWORD}@{Config.MONGO_HOST}:{Config.MONGO_PORT}/"
-            f"smart_voting_system?authSource=admin&retryWrites=true&w=majority"
+            f"mongodb://{Config.MONGO_USERNAME}:{Config.MONGO_PASSWORD}@"
+            f"{Config.MONGO_HOST}:{Config.MONGO_PORT}/smart_voting_system?"
+            f"authSource=admin&retryWrites=true&w=majority"
         ),
     )
 
@@ -92,8 +93,9 @@ class ProductionConfig(Config):
 class TestingConfig(Config):
     TESTING = True
     MONGO_URI = (
-        f"mongodb://{Config.MONGO_USERNAME}:{Config.MONGO_PASSWORD}@{Config.MONGO_HOST}:{Config.MONGO_PORT}/"
-        f"smart_voting_test?authSource=admin&retryWrites=true&w=majority"
+        f"mongodb://{Config.MONGO_USERNAME}:{Config.MONGO_PASSWORD}@"
+        f"{Config.MONGO_HOST}:{Config.MONGO_PORT}/smart_voting_test?"
+        f"authSource=admin&retryWrites=true&w=majority"
     )
 
 
