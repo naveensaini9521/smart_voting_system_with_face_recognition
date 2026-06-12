@@ -276,8 +276,9 @@ def register_socket_events(socketio):
                 voter_id = client_data.get("voter_id")
                 voter = Voter.find_by_voter_id(voter_id)
                 if voter:
-                    from smart_app.backend.routes.dashboard import \
-                        get_enhanced_dashboard_data
+                    from smart_app.backend.routes.dashboard import (
+                        get_enhanced_dashboard_data,
+                    )
 
                     dashboard_data = get_enhanced_dashboard_data(voter)
                     safe_emit(

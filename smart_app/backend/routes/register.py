@@ -10,9 +10,11 @@ from email.mime.text import MIMEText
 
 from flask import Blueprint, jsonify, request
 from mongo_models import OTP, AuditLog, FaceEncoding, Voter, calculate_age
-from services.face_recognition_service import (hybrid_face_service,
-                                               knn_face_service,
-                                               multi_face_service)
+from services.face_recognition_service import (
+    hybrid_face_service,
+    knn_face_service,
+    multi_face_service,
+)
 
 logger = logging.getLogger(__name__)
 

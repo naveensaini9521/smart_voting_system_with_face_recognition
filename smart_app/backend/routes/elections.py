@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 from flask import Blueprint, jsonify, request
 from flask_cors import cross_origin
+
 # Import from your project structure
 from mongo_models import AuditLog, Candidate, Election, Vote, Voter
 from routes.dashboard import get_authenticated_voter, voter_required

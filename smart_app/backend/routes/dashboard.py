@@ -16,8 +16,7 @@ from flask_socketio import emit, join_room
 from mongo_models import OTP, Admin, AuditLog, Candidate, Election, Vote, Voter
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from socket_events import (connected_clients,  # Note: socket_events must exist
-                           safe_emit)
+from socket_events import connected_clients, safe_emit  # Note: socket_events must exist
 
 logger = logging.getLogger(__name__)
 dashboard_bp = Blueprint("dashboard", __name__)
@@ -1487,8 +1486,13 @@ def export_pdf_data(voter):
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.styles import getSampleStyleSheet
-        from reportlab.platypus import (Paragraph, SimpleDocTemplate, Spacer,
-                                        Table, TableStyle)
+        from reportlab.platypus import (
+            Paragraph,
+            SimpleDocTemplate,
+            Spacer,
+            Table,
+            TableStyle,
+        )
 
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter)
