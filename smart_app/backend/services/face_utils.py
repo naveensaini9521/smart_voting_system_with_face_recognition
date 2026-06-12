@@ -120,9 +120,6 @@ class FaceUtils:
         }
         return colors.get(method.lower(), colors["unknown"])
 
-    # ------------------------------------------------------------------
-    # Image enhancement (same as before)
-    # ------------------------------------------------------------------
     def enhance_image(self, image_array: np.ndarray) -> np.ndarray:
         """Enhance image quality using CLAHE, sharpening, and bilateral filter."""
         try:
@@ -145,9 +142,7 @@ class FaceUtils:
             logger.error(f"Image enhancement error: {str(e)}")
             return image_array
 
-    # ------------------------------------------------------------------
     # Eye detection & face alignment (improved with optional backends)
-    # ------------------------------------------------------------------
     def align_face(
         self, image_array: np.ndarray, face_bbox: Tuple
     ) -> Optional[np.ndarray]:

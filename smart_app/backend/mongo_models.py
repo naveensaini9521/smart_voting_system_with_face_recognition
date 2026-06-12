@@ -28,7 +28,7 @@ class MongoBase:
         if isinstance(doc_id, str):
             try:
                 doc_id = ObjectId(doc_id)
-            except:
+            except Exception as e:
                 return None
         return cls.get_collection().find_one({"_id": doc_id})
 
@@ -719,7 +719,6 @@ class User(MongoBase):
         if cls.find_by_email(email):
             raise ValueError("Email already exists")
 
-        # Use bcrypt directly with proper encoding
         password_bytes = password.encode("utf-8")
         password_hash = bcrypt.hashpw(password_bytes, bcrypt.gensalt()).decode("utf-8")
 
