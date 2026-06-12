@@ -13,27 +13,19 @@ from extensions import socketio
 from flask import Blueprint, current_app, jsonify, request, send_file
 from flask_cors import cross_origin
 from flask_socketio import emit, join_room
-
-# Import from your project structure
 from mongo_models import OTP, Admin, AuditLog, Candidate, Election, Vote, Voter
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from socket_events import connected_clients, safe_emit
+from socket_events import connected_clients, safe_emit  # keep imported
 
 logger = logging.getLogger(__name__)
 
 # Create blueprint
 dashboard_bp = Blueprint("dashboard", __name__)
 
-
 # JWT configuration (should match auth.py)
 JWT_SECRET = "sUJbaMMUAKYojj0dFe94jO"
 JWT_ALGORITHM = "HS256"
-
-# Store connected clients
-connected_clients = {}
-
-# In dashboard.py, update the verify_token function:
 
 
 def verify_token(token):
@@ -43,7 +35,6 @@ def verify_token(token):
             logger.warning("No token provided")
             return None
 
-        # Remove any "Bearer " prefix if present
         if token.startswith("Bearer "):
             token = token.split(" ")[1].strip()
 
@@ -54,10 +45,7 @@ def verify_token(token):
         logger.info(f"Verifying token: {token[:20]}...")
 
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-
-        # Debug logging
         logger.info(f"Token payload verified: {list(payload.keys())}")
-
         return payload
     except jwt.ExpiredSignatureError:
         logger.warning("Token expired")
@@ -70,17 +58,14 @@ def verify_token(token):
         return None
 
 
-# In dashboard.py, fix the get_authenticated_voter function:
 def get_authenticated_voter():
     """Get authenticated voter from token - SIMPLIFIED FIXED VERSION"""
     try:
-        # Check for Authorization header
         auth_header = request.headers.get("Authorization")
         if not auth_header:
             print("No Authorization header")
             return None
 
-        # Extract token
         if auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
         else:
@@ -92,7 +77,6 @@ def get_authenticated_voter():
 
         print(f"Token received: {token[:50]}...")
 
-        # Verify token using JWT
         try:
             payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
             print(f"Token payload: {payload}")
@@ -103,7 +87,6 @@ def get_authenticated_voter():
             print(f"Invalid token: {str(e)}")
             return None
 
-        # Extract voter_id from payload
         voter_id = payload.get("voter_id")
         if not voter_id:
             print("No voter_id in token payload")
@@ -111,7 +94,6 @@ def get_authenticated_voter():
 
         print(f"Looking for voter with ID: {voter_id}")
 
-        # Find voter in database
         voter = Voter.find_by_voter_id(voter_id)
         if not voter:
             print(f"Voter not found: {voter_id}")
@@ -128,7 +110,6 @@ def get_authenticated_voter():
         return None
 
 
-####
 def get_authenticated_admin():
     """Get authenticated admin from token"""
     try:
@@ -158,7 +139,6 @@ def voter_required(f):
 
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Handle OPTIONS requests for CORS
         if request.method == "OPTIONS":
             return jsonify({"status": "ok"}), 200
 
@@ -177,7 +157,6 @@ def voter_required(f):
                     401,
                 )
 
-            # Check if voter is active
             if not voter.get("is_active", True):
                 logger.warning(f"Inactive voter attempt: {voter.get('voter_id')}")
                 return (
@@ -191,7 +170,6 @@ def voter_required(f):
                     403,
                 )
 
-            # Attach voter to request object for easy access
             request.voter = voter
             return f(*args, **kwargs)
 
@@ -228,22 +206,6 @@ def admin_required(f):
     return decorated_function
 
 
-# ============ SOCKETIO FIXES ============
-
-
-def safe_emit(event, data, room=None, broadcast=False):
-    """Safely emit events with error handling"""
-    try:
-        if room:
-            socketio.emit(event, data, room=room, broadcast=broadcast)
-        else:
-            socketio.emit(event, data, broadcast=broadcast)
-        return True
-    except Exception as e:
-        logger.error(f"Safe emit error for event {event}: {str(e)}")
-        return False
-
-
 def handle_voter_connection(voter_id):
     """Handle voter WebSocket connection - FIXED VERSION"""
     try:
@@ -253,12 +215,10 @@ def handle_voter_connection(voter_id):
             emit("connection_error", {"message": "Voter not found"})
             return False
 
-        # Join rooms
         join_room(f"voter_{voter_id}")
         join_room("all_voters")
         join_room("public_updates")
 
-        # Store connection info
         connected_clients[request.sid] = {
             "type": "voter",
             "voter_id": voter_id,
@@ -267,7 +227,6 @@ def handle_voter_connection(voter_id):
 
         logger.info(f"Voter {voter_id} connected to SocketIO. SID: {request.sid}")
 
-        # Emit connection confirmation
         emit(
             "connection_established",
             {
@@ -296,12 +255,10 @@ def handle_admin_connection(admin_id):
             emit("connection_error", {"message": "Admin not found"})
             return False
 
-        # Join rooms
         join_room(f"admin_{admin_id}")
         join_room("all_admins")
         join_room("public_updates")
 
-        # Store connection info
         connected_clients[request.sid] = {
             "type": "admin",
             "admin_id": admin_id,
@@ -310,7 +267,6 @@ def handle_admin_connection(admin_id):
 
         logger.info(f"Admin {admin_id} connected to SocketIO. SID: {request.sid}")
 
-        # Emit connection confirmation
         emit(
             "connection_established",
             {
@@ -330,9 +286,6 @@ def handle_admin_connection(admin_id):
         return False
 
 
-# ============ REAL-TIME UPDATE FUNCTIONS ============
-
-
 def broadcast_election_update(action, election_data, admin_id=None):
     """Broadcast election updates to all connected clients"""
     try:
@@ -344,17 +297,12 @@ def broadcast_election_update(action, election_data, admin_id=None):
             "admin_id": admin_id,
         }
 
-        # Broadcast to all voters
         safe_emit("election_update", update_data, room="all_voters")
-
-        # Broadcast to specific election room
         safe_emit(
             "election_update",
             update_data,
             room=f"election_{election_data.get('election_id')}",
         )
-
-        # Also send to admins
         safe_emit("election_update", update_data, room="all_admins")
 
         logger.info(
@@ -376,12 +324,9 @@ def broadcast_voter_update(action, voter_data, admin_id=None):
             "admin_id": admin_id,
         }
 
-        # Broadcast to specific voter
         safe_emit(
             "voter_update", update_data, room=f"voter_{voter_data.get('voter_id')}"
         )
-
-        # Broadcast to admins
         safe_emit("voter_update", update_data, room="all_admins")
 
         logger.info(f"Broadcasted voter {action}: {voter_data.get('voter_id')}")
@@ -401,9 +346,7 @@ def broadcast_system_update(action, data, admin_id=None):
             "admin_id": admin_id,
         }
 
-        # Broadcast to everyone
         safe_emit("system_update", update_data, broadcast=True)
-
         logger.info(f"Broadcasted system update: {action}")
 
     except Exception as e:
@@ -437,15 +380,13 @@ def get_connected_users_count():
 def get_socket_status():
     """Get SocketIO connection status"""
     try:
-        socketio = get_socketio()
+        socketio_instance = get_socketio()
         return jsonify(
             {
                 "success": True,
-                "socketio_available": socketio is not None,
+                "socketio_available": socketio_instance is not None,
                 "connected_clients": len(connected_clients),
-                "clients_details": list(connected_clients.values())[
-                    :10
-                ],  # First 10 clients
+                "clients_details": list(connected_clients.values())[:10],
                 "server_time": datetime.utcnow().isoformat(),
             }
         )
@@ -483,7 +424,6 @@ def update_election_statuses():
     try:
         current_time = datetime.utcnow()
 
-        # Update scheduled elections to active if voting has started
         Election.get_collection().update_many(
             {
                 "status": "scheduled",
@@ -494,7 +434,6 @@ def update_election_statuses():
             {"$set": {"status": "active", "updated_at": current_time}},
         )
 
-        # Update active elections to completed if voting has ended
         Election.get_collection().update_many(
             {
                 "status": "active",
@@ -510,9 +449,6 @@ def update_election_statuses():
         print(f"Error updating election statuses: {str(e)}")
 
 
-# ============ DASHBOARD ROUTES ============
-
-
 @dashboard_bp.route("/data", methods=["GET", "OPTIONS"])
 @cross_origin()
 @voter_required
@@ -524,7 +460,6 @@ def get_dashboard_data():
 
         dashboard_data = get_enhanced_dashboard_data(voter)
 
-        # Log dashboard access
         AuditLog.create_log(
             action="dashboard_access",
             user_id=voter["voter_id"],
@@ -558,7 +493,6 @@ def get_profile():
     try:
         voter = request.voter
 
-        # Enhanced profile data
         profile_data = {
             "voter_id": voter["voter_id"],
             "full_name": voter["full_name"],
@@ -611,25 +545,6 @@ def get_profile():
     except Exception as e:
         logger.error(f"Profile error: {str(e)}", exc_info=True)
         return jsonify({"success": False, "message": "Failed to load profile"}), 500
-
-
-###
-def get_enhanced_dashboard_data(voter):
-    """Get enhanced dashboard data with real-time features"""
-    return {
-        "voter_info": get_enhanced_voter_info(voter),
-        "election_info": get_enhanced_election_info(voter),
-        "quick_stats": get_enhanced_quick_stats(voter),
-        "notifications": get_recent_notifications(voter["voter_id"]),
-        "analytics": get_voter_analytics(voter["voter_id"]),
-        "system_status": get_system_status(),
-        "real_time_updates": {
-            "last_updated": datetime.utcnow().isoformat(),
-            "active_elections_count": get_active_elections_count(),
-            "total_votes_today": get_today_votes_count(),
-            "connected_users": get_connected_users_count(),
-        },
-    }
 
 
 @dashboard_bp.route("/socket-info", methods=["GET"])
@@ -702,9 +617,6 @@ def get_enhanced_dashboard_data_for_socket(voter):
     return get_enhanced_dashboard_data(voter)
 
 
-# ============ ADMIN REAL-TIME ENDPOINTS ============
-
-
 @dashboard_bp.route("/admin/update-election", methods=["POST"])
 @cross_origin()
 @admin_required
@@ -712,7 +624,7 @@ def admin_update_election():
     """Admin endpoint to update elections (triggers real-time updates)"""
     try:
         data = request.get_json()
-        action = data.get("action")  # create, update, delete, activate, deactivate
+        action = data.get("action")
         election_data = data.get("election_data")
 
         if not action or not election_data:
@@ -726,16 +638,13 @@ def admin_update_election():
                 400,
             )
 
-        # Perform the election operation
         result = perform_election_operation(action, election_data, request.admin)
 
         if result["success"]:
-            # Broadcast the update to all connected clients
             broadcast_election_update(
                 action, result["election"], request.admin["admin_id"]
             )
 
-            # Send private notification to affected voters if needed
             if action in ["create", "activate"]:
                 notify_voters_about_new_election(result["election"])
 
@@ -762,7 +671,7 @@ def admin_update_voter():
     """Admin endpoint to update voter status (triggers real-time updates)"""
     try:
         data = request.get_json()
-        action = data.get("action")  # verify, suspend, activate, update
+        action = data.get("action")
         voter_data = data.get("voter_data")
 
         if not action or not voter_data:
@@ -773,14 +682,11 @@ def admin_update_voter():
                 400,
             )
 
-        # Perform the voter operation
         result = perform_voter_operation(action, voter_data, request.admin)
 
         if result["success"]:
-            # Broadcast the update
             broadcast_voter_update(action, result["voter"], request.admin["admin_id"])
 
-            # Send private notification to the voter
             if action in ["verify", "activate"]:
                 send_voter_status_notification(result["voter"], action)
 
@@ -813,7 +719,6 @@ def admin_broadcast():
         if not message:
             return jsonify({"success": False, "message": "Message is required"}), 400
 
-        # Use SocketIO to broadcast
         safe_emit(
             "admin_broadcast",
             {
@@ -827,7 +732,6 @@ def admin_broadcast():
             broadcast=True,
         )
 
-        # Log the broadcast
         AuditLog.create_log(
             action="admin_broadcast",
             user_id=request.admin["admin_id"],
@@ -864,9 +768,7 @@ def get_connected_users():
             {
                 "success": True,
                 "connected_users": get_connected_users_count(),
-                "detailed_connections": list(connected_clients.values())[
-                    :50
-                ],  # First 50 connections
+                "detailed_connections": list(connected_clients.values())[:50],
             }
         )
     except Exception as e:
@@ -877,13 +779,9 @@ def get_connected_users():
         )
 
 
-# ============ NOTIFICATION HELPERS ============
-
-
 def notify_voters_about_new_election(election):
     """Notify voters about new election"""
     try:
-        # In a real implementation, you might want to notify specific constituencies
         notification_data = {
             "type": "new_election",
             "title": "New Election Available",
@@ -892,10 +790,7 @@ def notify_voters_about_new_election(election):
             "timestamp": datetime.utcnow().isoformat(),
             "action_url": f"/elections/{election.get('election_id')}",
         }
-
-        # Broadcast to all voters
         safe_emit("election_notification", notification_data, room="all_voters")
-
     except Exception as e:
         logger.error(f"Error notifying voters about new election: {str(e)}")
 
@@ -910,25 +805,18 @@ def send_voter_status_notification(voter, action):
             "timestamp": datetime.utcnow().isoformat(),
             "action": action,
         }
-
         send_private_notification(voter["voter_id"], notification_data)
-
     except Exception as e:
         logger.error(f"Error sending voter status notification: {str(e)}")
-
-
-# ============ REAL-TIME OPERATION HANDLERS ============
 
 
 def perform_election_operation(action, election_data, admin):
     """Perform election operations and return result"""
     try:
         if action == "create":
-            # Create new election
             election_id = Election.create_election(election_data)
             election = Election.find_by_election_id(election_id)
 
-            # Log admin action
             AuditLog.create_log(
                 action="create_election",
                 user_id=admin["admin_id"],
@@ -941,7 +829,6 @@ def perform_election_operation(action, election_data, admin):
                 ip_address=request.remote_addr,
                 user_agent=request.headers.get("User-Agent"),
             )
-
             return {"success": True, "election": election}
 
         elif action == "update":
@@ -949,7 +836,6 @@ def perform_election_operation(action, election_data, admin):
             if not election_id:
                 return {"success": False, "message": "Election ID required"}
 
-            # Update election
             update_data = {k: v for k, v in election_data.items() if k != "election_id"}
             Election.update_one({"election_id": election_id}, update_data)
             election = Election.find_by_election_id(election_id)
@@ -966,7 +852,6 @@ def perform_election_operation(action, election_data, admin):
                 ip_address=request.remote_addr,
                 user_agent=request.headers.get("User-Agent"),
             )
-
             return {"success": True, "election": election}
 
         elif action == "delete":
@@ -974,7 +859,6 @@ def perform_election_operation(action, election_data, admin):
             if not election_id:
                 return {"success": False, "message": "Election ID required"}
 
-            # Soft delete election
             Election.update_one(
                 {"election_id": election_id},
                 {"is_active": False, "status": "cancelled"},
@@ -989,7 +873,6 @@ def perform_election_operation(action, election_data, admin):
                 ip_address=request.remote_addr,
                 user_agent=request.headers.get("User-Agent"),
             )
-
             return {"success": True, "election": election}
 
         elif action == "activate":
@@ -1008,7 +891,6 @@ def perform_election_operation(action, election_data, admin):
                 ip_address=request.remote_addr,
                 user_agent=request.headers.get("User-Agent"),
             )
-
             return {"success": True, "election": election}
 
         else:
@@ -1062,7 +944,6 @@ def perform_voter_operation(action, voter_data, admin):
                 ip_address=request.remote_addr,
                 user_agent=request.headers.get("User-Agent"),
             )
-
             return {"success": True, "voter": voter}
 
         elif action == "suspend":
@@ -1077,7 +958,6 @@ def perform_voter_operation(action, voter_data, admin):
                 ip_address=request.remote_addr,
                 user_agent=request.headers.get("User-Agent"),
             )
-
             return {"success": True, "voter": voter}
 
         elif action == "activate":
@@ -1092,7 +972,6 @@ def perform_voter_operation(action, voter_data, admin):
                 ip_address=request.remote_addr,
                 user_agent=request.headers.get("User-Agent"),
             )
-
             return {"success": True, "voter": voter}
 
         else:
@@ -1196,8 +1075,7 @@ def calculate_membership_duration(registration_date):
 
 
 def calculate_voting_streak(voter_id):
-    """Calculate consecutive voting streak"""
-    # Implementation for voting streak calculation
+    """Calculate consecutive voting streak (placeholder)"""
     return 0
 
 
@@ -1246,7 +1124,7 @@ def get_voting_reminders(voter_id):
         upcoming_elections = get_upcoming_elections({"voter_id": voter_id})
         reminders = []
 
-        for election in upcoming_elections[:2]:  # Top 2 upcoming elections
+        for election in upcoming_elections[:2]:
             if election.get("can_register", False):
                 reminders.append(
                     {
@@ -1287,9 +1165,6 @@ def calculate_days_remaining(target_date):
     return max(0, remaining.days)
 
 
-# ============ ENHANCED DASHBOARD ROUTES ============
-
-
 @dashboard_bp.route("/live-updates", methods=["GET"])
 @cross_origin()
 def get_live_updates():
@@ -1302,21 +1177,13 @@ def get_live_updates():
                 401,
             )
 
-        # Get updates from last hour
-        one_hour_ago = datetime.utcnow() - timedelta(hours=1)
-        recent_updates = []
-
-        # This would come from your live updates storage
-        # For now, return empty list
-        recent_updates = []
-
-        # Sort by timestamp (newest first)
+        recent_updates = []  # Placeholder for actual updates
         recent_updates.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
 
         return jsonify(
             {
                 "success": True,
-                "updates": recent_updates[:20],  # Return last 20 updates
+                "updates": recent_updates[:20],
                 "total_updates": len(recent_updates),
                 "last_checked": datetime.utcnow().isoformat(),
             }
@@ -1343,7 +1210,7 @@ def get_live_elections():
             )
 
         election_type = request.args.get("type", "all")
-        request.args.get("status", "active")
+        # request.args.get("status", "active")  # removed unused
 
         elections_data = {
             "upcoming": get_upcoming_elections(voter, election_type),
@@ -1369,9 +1236,6 @@ def get_live_elections():
         )
 
 
-# ============ EXISTING DASHBOARD ROUTES (UPDATED) ============
-
-
 @dashboard_bp.route("/digital-id", methods=["GET"])
 @cross_origin()
 def get_digital_id():
@@ -1384,7 +1248,6 @@ def get_digital_id():
                 401,
             )
 
-        # Generate QR code data
         qr_data = {
             "voter_id": voter["voter_id"],
             "full_name": voter["full_name"],
@@ -1399,7 +1262,6 @@ def get_digital_id():
             ),
         }
 
-        # Create QR code
         qr = qrcode.QRCode(version=1, box_size=10, border=5)
         qr.add_data(json.dumps(qr_data))
         qr.make(fit=True)
@@ -1409,7 +1271,6 @@ def get_digital_id():
         img.save(img_byte_arr, format="PNG")
         img_byte_arr.seek(0)
 
-        # Convert to base64 for easy frontend display
         qr_base64 = base64.b64encode(img_byte_arr.getvalue()).decode("utf-8")
 
         digital_id_data = {
@@ -1457,7 +1318,6 @@ def export_data():
         format_type = request.args.get("format", "json")
 
         if format_type == "json":
-            # Return JSON data
             export_data = {
                 "personal_info": {
                     "voter_id": voter["voter_id"],
@@ -1483,15 +1343,11 @@ def export_data():
                 "voting_history": get_voter_voting_history(voter["voter_id"]),
                 "exported_at": datetime.utcnow().isoformat(),
             }
-
             return jsonify({"success": True, "data": export_data, "format": "json"})
 
         elif format_type == "csv":
-            # Create CSV data
             output = io.StringIO()
             writer = csv.writer(output)
-
-            # Write headers
             writer.writerow(["Field", "Value"])
             writer.writerow(["Voter ID", voter["voter_id"]])
             writer.writerow(["Full Name", voter["full_name"]])
@@ -1504,7 +1360,6 @@ def export_data():
 
             csv_data = output.getvalue()
             output.close()
-
             return jsonify({"success": True, "data": csv_data, "format": "csv"})
 
         else:
@@ -1513,9 +1368,6 @@ def export_data():
     except Exception as e:
         logger.error(f"Export data error: {str(e)}", exc_info=True)
         return jsonify({"success": False, "message": "Failed to export data"}), 500
-
-
-# Add these new routes to your dashboard.py
 
 
 @dashboard_bp.route("/refresh-data", methods=["POST"])
@@ -1527,10 +1379,8 @@ def refresh_dashboard_data():
         voter = request.voter
         logger.info(f"Refreshing dashboard data for voter: {voter['voter_id']}")
 
-        # Clear any cached data
         dashboard_data = get_enhanced_dashboard_data(voter)
 
-        # Log the refresh action
         AuditLog.create_log(
             action="dashboard_refresh",
             user_id=voter["voter_id"],
@@ -1582,7 +1432,6 @@ def export_voter_data(format_type):
 def fix_election_dates():
     """Fix election dates in database"""
     try:
-        # Get all elections
         elections = Election.find_all({"is_active": True})
 
         fixed_count = 0
@@ -1596,43 +1445,33 @@ def fix_election_dates():
             print(f"   - voting_start: {voting_start} (type: {type(voting_start)})")
             print(f"   - voting_end: {voting_end} (type: {type(voting_end)})")
 
-            # Check if dates need fixing
             needs_fix = False
             new_dates = {}
 
-            # Fix voting_start
             if isinstance(voting_start, str):
-                # Try to parse it
                 parsed_start = normalize_date(voting_start)
                 if parsed_start:
                     new_dates["voting_start"] = parsed_start
                     needs_fix = True
                 else:
-                    # Create a default date (now + 1 day)
                     new_dates["voting_start"] = datetime.utcnow() + timedelta(days=1)
                     needs_fix = True
             elif voting_start is None:
-                # Create a default date
                 new_dates["voting_start"] = datetime.utcnow() + timedelta(days=1)
                 needs_fix = True
 
-            # Fix voting_end
             if isinstance(voting_end, str):
-                # Try to parse it
                 parsed_end = normalize_date(voting_end)
                 if parsed_end:
                     new_dates["voting_end"] = parsed_end
                     needs_fix = True
                 else:
-                    # Create a default date (now + 7 days)
                     new_dates["voting_end"] = datetime.utcnow() + timedelta(days=7)
                     needs_fix = True
             elif voting_end is None:
-                # Create a default date
                 new_dates["voting_end"] = datetime.utcnow() + timedelta(days=7)
                 needs_fix = True
 
-            # Update if needed
             if needs_fix:
                 print("   ⚠️ Need to fix dates")
                 print(f"   - New voting_start: {new_dates.get('voting_start')}")
@@ -1667,8 +1506,6 @@ def fix_election_dates():
 def export_pdf_data(voter):
     """Export voter data as PDF"""
     try:
-        import io
-
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.styles import getSampleStyleSheet
@@ -1685,12 +1522,10 @@ def export_pdf_data(voter):
         styles = getSampleStyleSheet()
         story = []
 
-        # Title
         title = Paragraph(f"Voter Data - {voter['full_name']}", styles["Title"])
         story.append(title)
         story.append(Spacer(1, 12))
 
-        # Personal Information
         personal_data = [
             ["Field", "Value"],
             ["Voter ID", voter["voter_id"]],
@@ -1720,14 +1555,13 @@ def export_pdf_data(voter):
         story.append(personal_table)
         story.append(Spacer(1, 12))
 
-        # Voting History
         voting_history = get_voter_voting_history(voter["voter_id"])
         if voting_history:
             history_title = Paragraph("Voting History", styles["Heading2"])
             story.append(history_title)
 
             history_data = [["Election", "Candidate", "Party", "Date"]]
-            for vote in voting_history[:10]:  # Limit to 10 most recent
+            for vote in voting_history[:10]:
                 history_data.append(
                     [
                         vote.get("election_title", "Unknown"),
@@ -1767,18 +1601,13 @@ def export_pdf_data(voter):
 def export_csv_data(voter):
     """Export voter data as CSV"""
     try:
-        import csv
-        import io
-
         output = io.StringIO()
         writer = csv.writer(output)
 
-        # Write header
         writer.writerow(["Voter Data Export"])
         writer.writerow(["Generated on", datetime.utcnow().isoformat()])
         writer.writerow([])
 
-        # Personal Information
         writer.writerow(["Personal Information"])
         writer.writerow(["Voter ID", voter["voter_id"]])
         writer.writerow(["Full Name", voter["full_name"]])
@@ -1789,7 +1618,6 @@ def export_csv_data(voter):
         writer.writerow(["Constituency", voter.get("constituency", "N/A")])
         writer.writerow([])
 
-        # Voting History
         voting_history = get_voter_voting_history(voter["voter_id"])
         if voting_history:
             writer.writerow(["Voting History"])
@@ -1807,7 +1635,6 @@ def export_csv_data(voter):
         csv_data = output.getvalue()
         output.close()
 
-        # Create bytes buffer for response
         bytes_buffer = io.BytesIO()
         bytes_buffer.write(csv_data.encode("utf-8"))
         bytes_buffer.seek(0)
@@ -1868,7 +1695,6 @@ def generate_digital_id():
     try:
         voter = request.voter
 
-        # Enhanced digital ID data
         digital_id_data = {
             "voter_id": voter["voter_id"],
             "full_name": voter["full_name"],
@@ -1884,13 +1710,11 @@ def generate_digital_id():
             "qr_data": f"VOTER:{voter['voter_id']}:{voter['full_name']}:{voter.get('constituency', 'General')}",
         }
 
-        # Generate QR code
         qr_img = generate_qr_code(digital_id_data["qr_data"])
         qr_base64 = qr_img_to_base64(qr_img)
 
         digital_id_data["qr_code"] = f"data:image/png;base64,{qr_base64}"
 
-        # Log digital ID generation
         AuditLog.create_log(
             action="digital_id_generated",
             user_id=voter["voter_id"],
@@ -1929,10 +1753,8 @@ def generate_qr_code(data):
         )
         qr.add_data(data)
         qr.make(fit=True)
-
         img = qr.make_image(fill_color="black", back_color="white")
         return img
-
     except Exception as e:
         logger.error(f"QR code generation error: {str(e)}")
         raise
@@ -1947,9 +1769,7 @@ def qr_img_to_base64(img):
         buffer = BytesIO()
         img.save(buffer, format="PNG")
         buffer.seek(0)
-
         return base64.b64encode(buffer.getvalue()).decode("utf-8")
-
     except Exception as e:
         logger.error(f"QR code base64 conversion error: {str(e)}")
         raise
@@ -1963,7 +1783,6 @@ def calculate_verification_level(voter):
         voter.get("id_verified", False),
         voter.get("face_verified", False),
     ]
-
     verified_count = sum(verifications)
 
     if verified_count == 4:
@@ -1983,10 +1802,8 @@ def get_enhanced_voting_history():
         voter = request.voter
         voter_id = voter["voter_id"]
 
-        # Get comprehensive voting history
         voting_history = get_voter_voting_history(voter_id)
 
-        # Calculate statistics
         total_votes = len(voting_history)
         current_year = datetime.utcnow().year
         current_year_votes = len(
@@ -1997,16 +1814,14 @@ def get_enhanced_voting_history():
             ]
         )
 
-        # Election type breakdown
         election_types = {}
         for vote in voting_history:
             election_type = vote.get("election_type", "unknown")
             election_types[election_type] = election_types.get(election_type, 0) + 1
 
-        # Monthly activity
         monthly_activity = {}
         for vote in voting_history:
-            month = vote.get("vote_timestamp", "")[:7]  # YYYY-MM
+            month = vote.get("vote_timestamp", "")[:7]
             if month:
                 monthly_activity[month] = monthly_activity.get(month, 0) + 1
 
@@ -2081,7 +1896,6 @@ def get_enhanced_analytics():
 def get_enhanced_security():
     """Get comprehensive security information - FIXED VERSION"""
     try:
-        # First try to get authenticated voter
         voter = get_authenticated_voter()
         if not voter:
             logger.warning("No authenticated voter for security endpoint")
@@ -2098,7 +1912,6 @@ def get_enhanced_security():
 
         voter_id = voter["voter_id"]
 
-        # Create basic security data structure
         security_data = {
             "account_security": {
                 "verification_status": {
@@ -2131,7 +1944,6 @@ def get_enhanced_security():
             },
         }
 
-        # Log security access
         AuditLog.create_log(
             action="security_info_accessed",
             user_id=voter_id,
@@ -2163,32 +1975,24 @@ def get_enhanced_security():
         )
 
 
-# Additional helper functions for enhanced features
-
-
 def calculate_verification_score(voter):
-    """Calculate verification score (0-100)"""
     verifications = [
         voter.get("email_verified", False),
         voter.get("phone_verified", False),
         voter.get("id_verified", False),
         voter.get("face_verified", False),
     ]
-
     verified_count = sum(verifications)
     return (verified_count / len(verifications)) * 100
 
 
 def calculate_trust_level(voter):
-    """Calculate trust level based on various factors"""
     verification_score = calculate_verification_score(voter)
     account_age = calculate_account_age(voter)
     activity_score = calculate_activity_score(voter["voter_id"])
-
     trust_score = (
         (verification_score * 0.4) + (account_age * 0.3) + (activity_score * 0.3)
     )
-
     if trust_score >= 80:
         return "High"
     elif trust_score >= 60:
@@ -2198,52 +2002,37 @@ def calculate_trust_level(voter):
 
 
 def calculate_activity_score(voter_id):
-    """Calculate activity score based on voting and login patterns"""
-    # Implementation for activity score calculation
-    return 75  # Placeholder
+    return 75  # placeholder
 
 
 def analyze_voting_patterns(voter_id):
-    """Analyze voting patterns and habits"""
     voting_history = get_voter_voting_history(voter_id)
-
-    patterns = {
+    return {
         "total_elections": len(voting_history),
         "average_votes_per_year": calculate_average_votes_per_year(voting_history),
         "preferred_voting_times": analyze_voting_times(voter_id),
         "consistency_score": calculate_consistency_score(voting_history),
     }
 
-    return patterns
-
 
 def get_preferred_election_types(voter_id):
-    """Get preferred election types based on voting history"""
     voting_history = get_voter_voting_history(voter_id)
-
     election_types = {}
     for vote in voting_history:
         election_type = vote.get("election_type", "unknown")
         election_types[election_type] = election_types.get(election_type, 0) + 1
-
     return election_types
 
 
 def analyze_voting_times(voter_id):
-    """Analyze preferred voting times"""
-    # Implementation for voting time analysis
     return {"morning_votes": 0, "afternoon_votes": 0, "evening_votes": 0}
 
 
 def get_age_group_comparison(voter):
-    """Compare voter with their age group"""
-    # Implementation for age group comparison
     return {"age_group": "25-35", "participation_rate": 75, "average_votes": 5}
 
 
 def get_regional_comparison(voter):
-    """Compare voter with regional averages"""
-    # Implementation for regional comparison
     return {
         "region": voter.get("state", "Unknown"),
         "regional_participation": 65,
@@ -2252,18 +2041,14 @@ def get_regional_comparison(voter):
 
 
 def calculate_account_health(voter):
-    """Calculate overall account health score"""
     verification_score = calculate_verification_score(voter)
     security_score = assess_security_score(voter)
     activity_score = calculate_activity_score(voter["voter_id"])
-
     return (verification_score + security_score + activity_score) / 3
 
 
 def assess_security_score(voter):
-    """Assess security score based on various factors"""
     score = 0
-
     if voter.get("email_verified"):
         score += 25
     if voter.get("phone_verified"):
@@ -2272,13 +2057,10 @@ def assess_security_score(voter):
         score += 25
     if voter.get("face_verified"):
         score += 25
-
     return score
 
 
 def analyze_login_patterns(voter_id):
-    """Analyze login patterns for security"""
-    # Implementation for login pattern analysis
     return {
         "usual_login_times": ["09:00-12:00", "14:00-18:00"],
         "unusual_activities": 0,
@@ -2287,15 +2069,11 @@ def analyze_login_patterns(voter_id):
 
 
 def calculate_device_trust_score(voter_id):
-    """Calculate device trust score"""
-    # Implementation for device trust scoring
     return 85
 
 
 def get_voting_achievements(voter_id, voting_history):
-    """Get voting achievements and badges"""
     achievements = []
-
     total_votes = len(voting_history)
 
     if total_votes >= 1:
@@ -2307,7 +2085,6 @@ def get_voting_achievements(voter_id, voting_history):
                 "unlocked": True,
             }
         )
-
     if total_votes >= 5:
         achievements.append(
             {
@@ -2317,7 +2094,6 @@ def get_voting_achievements(voter_id, voting_history):
                 "unlocked": True,
             }
         )
-
     if total_votes >= 10:
         achievements.append(
             {
@@ -2328,15 +2104,11 @@ def get_voting_achievements(voter_id, voting_history):
             }
         )
 
-    # Add more achievements based on voting patterns
-
     return achievements
 
 
 def generate_voting_timeline(voting_history):
-    """Generate voting timeline"""
     timeline = []
-
     for vote in voting_history:
         timeline.append(
             {
@@ -2347,7 +2119,6 @@ def generate_voting_timeline(voting_history):
                 "type": "vote_cast",
             }
         )
-
     return sorted(timeline, key=lambda x: x["date"], reverse=True)
 
 
@@ -2363,14 +2134,11 @@ def download_voter_slip():
                 401,
             )
 
-        # Get active elections
         active_elections = get_active_elections(voter)
 
-        # Create PDF in memory
         buffer = io.BytesIO()
         p = canvas.Canvas(buffer, pagesize=letter)
 
-        # Add content to PDF
         p.setFont("Helvetica-Bold", 16)
         p.drawString(100, 750, "VOTER SLIP")
         p.setFont("Helvetica", 12)
@@ -2388,7 +2156,7 @@ def download_voter_slip():
 
         if active_elections:
             p.drawString(100, y_position - 120, "Active Elections:")
-            for i, election in enumerate(active_elections[:3]):  # Show max 3 elections
+            for i, election in enumerate(active_elections[:3]):
                 p.drawString(
                     120,
                     y_position - 140 - (i * 20),
@@ -2421,11 +2189,10 @@ def download_voter_slip():
         )
 
 
-# ============ KEEP ALL YOUR EXISTING HELPER FUNCTIONS ============
+# ============ HELPER FUNCTIONS (original, kept) ============
 
 
 def calculate_profile_completion(voter):
-    """Calculate profile completion percentage"""
     required_fields = [
         "full_name",
         "father_name",
@@ -2440,13 +2207,11 @@ def calculate_profile_completion(voter):
         "pincode",
         "national_id_number",
     ]
-
     completed = sum(1 for field in required_fields if voter.get(field))
     return int((completed / len(required_fields)) * 100)
 
 
 def calculate_profile_score(voter):
-    """Calculate comprehensive profile score"""
     base_score = calculate_profile_completion(voter)
     verification_bonus = sum(
         [
@@ -2456,19 +2221,16 @@ def calculate_profile_score(voter):
             15 if voter.get("face_verified") else 0,
         ]
     )
-
     return min(100, base_score + verification_bonus)
 
 
 def get_upcoming_elections(voter, election_type="all"):
-    """Get upcoming elections for voter"""
     try:
         query = {
             "voting_start": {"$gt": datetime.utcnow()},
             "status": "scheduled",
             "is_active": True,
         }
-
         if election_type != "all":
             query["election_type"] = election_type
 
@@ -2495,66 +2257,40 @@ def get_upcoming_elections(voter, election_type="all"):
                     ),
                 }
             )
-
         return enhanced_elections
     except Exception as e:
         logger.error(f"Error getting upcoming elections: {str(e)}")
         return []
 
 
-# In dashboard.py, update the get_active_elections function:
 def get_active_elections(voter, election_type="all"):
-    """Get active elections for voter - FIXED with proper date handling"""
     try:
         current_time = datetime.utcnow()
         print(f"🔍 Looking for active elections at: {current_time}")
 
-        # Get ALL elections first to debug
-        all_elections = Election.find_all({"is_active": True})
-        print(f"📊 Total active elections in DB: {len(all_elections)}")
-
-        for election in all_elections:
-            print(f"📋 Election: {election.get('title')}")
-            print(f"   - ID: {election.get('election_id')}")
-            print(f"   - Status: {election.get('status')}")
-            print(f"   - Voting Start: {election.get('voting_start')}")
-            print(f"   - Voting End: {election.get('voting_end')}")
-
-        # Build query for active elections
         query = {"is_active": True, "status": "active"}
+        if election_type != "all":
+            query["election_type"] = election_type
 
         elections = Election.find_all(query, sort=[("voting_end", 1)])
-        print(f"📊 Found {len(elections)} elections with active status")
 
-        # Filter by date manually
         active_elections = []
         for election in elections:
             voting_start = normalize_date(election.get("voting_start"))
             voting_end = normalize_date(election.get("voting_end"))
 
             if not voting_start or not voting_end:
-                print(f"⚠️ Election {election.get('election_id')} missing voting dates")
                 continue
-
-            print(f"🔍 Checking: {election.get('title')}")
-            print(f"   - Voting period: {voting_start} to {voting_end}")
-            print(f"   - Current time: {current_time}")
-            print(f"   - Is active now: {voting_start <= current_time <= voting_end}")
 
             if voting_start <= current_time <= voting_end:
                 active_elections.append(election)
-                print(f"✅ ADDED to active: {election.get('title')}")
-            else:
-                print(f"❌ NOT ACTIVE: {election.get('title')}")
 
-        print(f"🎯 Final active elections count: {len(active_elections)}")
-
-        # Process active elections
         enhanced_elections = []
         for election in active_elections:
             try:
-                # Simple eligibility for debugging
-                is_eligible = True  # Temporarily set to True
+                is_eligible = check_voter_eligibility(
+                    voter["voter_id"], election.get("election_id")
+                )
                 has_voted = Vote.has_voted(
                     election.get("election_id"), voter["voter_id"]
                 )
@@ -2582,7 +2318,6 @@ def get_active_elections(voter, election_type="all"):
                         ),
                     }
                 )
-
             except Exception as e:
                 print(
                     f"Error enhancing election {election.get('election_id')}: {str(e)}"
@@ -2600,14 +2335,12 @@ def get_active_elections(voter, election_type="all"):
 
 
 def get_past_elections(voter, election_type="all"):
-    """Get past elections for voter"""
     try:
         query = {
             "voting_end": {"$lt": datetime.utcnow()},
             "status": {"$in": ["completed", "cancelled"]},
             "is_active": True,
         }
-
         if election_type != "all":
             query["election_type"] = election_type
 
@@ -2639,7 +2372,6 @@ def get_past_elections(voter, election_type="all"):
                     > election.get("results_publish", datetime.utcnow()),
                 }
             )
-
         return enhanced_elections
     except Exception as e:
         logger.error(f"Error getting past elections: {str(e)}")
@@ -2647,7 +2379,6 @@ def get_past_elections(voter, election_type="all"):
 
 
 def get_votes_cast_count(voter_id):
-    """Get number of votes cast by voter"""
     try:
         return Vote.count({"voter_id": voter_id, "is_verified": True})
     except Exception as e:
@@ -2656,14 +2387,12 @@ def get_votes_cast_count(voter_id):
 
 
 def get_elections_participated_count(voter_id):
-    """Get number of elections participated in"""
     try:
         pipeline = [
             {"$match": {"voter_id": voter_id, "is_verified": True}},
             {"$group": {"_id": "$election_id"}},
             {"$count": "election_count"},
         ]
-
         result = list(Vote.get_collection().aggregate(pipeline))
         return result[0]["election_count"] if result else 0
     except Exception as e:
@@ -2672,7 +2401,6 @@ def get_elections_participated_count(voter_id):
 
 
 def get_upcoming_elections_count():
-    """Get count of upcoming elections"""
     try:
         return Election.count(
             {
@@ -2687,11 +2415,9 @@ def get_upcoming_elections_count():
 
 
 def calculate_average_votes_per_year(voting_history):
-    """Calculate average number of votes per year"""
     if not voting_history:
         return 0
 
-    # Group votes by year
     votes_by_year = {}
     for vote in voting_history:
         vote_date = vote.get("vote_timestamp")
@@ -2704,30 +2430,26 @@ def calculate_average_votes_per_year(voting_history):
                     year = datetime.fromisoformat(vote_date.replace("Z", "+00:00")).year
                 else:
                     continue
-
                 votes_by_year[year] = votes_by_year.get(year, 0) + 1
-            except:
+            except Exception as e:
+                logger.warning(f"Error parsing vote date: {e}")
                 continue
 
     if not votes_by_year:
         return 0
 
-    # Calculate average
     total_votes = sum(votes_by_year.values())
     total_years = len(votes_by_year)
-
     return round(total_votes / total_years, 1) if total_years > 0 else 0
 
 
 def get_verification_status(voter):
-    """Get verification status"""
     verifications = [
         voter.get("email_verified", False),
         voter.get("phone_verified", False),
         voter.get("id_verified", False),
         voter.get("face_verified", False),
     ]
-
     verified_count = sum(verifications)
     total_count = len(verifications)
 
@@ -2740,7 +2462,6 @@ def get_verification_status(voter):
 
 
 def calculate_participation_rate(voter_id):
-    """Calculate voter participation rate"""
     try:
         total_elections = Election.count(
             {
@@ -2749,10 +2470,8 @@ def calculate_participation_rate(voter_id):
                 "is_active": True,
             }
         )
-
         if total_elections == 0:
             return 0
-
         participated = get_elections_participated_count(voter_id)
         return int((participated / total_elections) * 100)
     except Exception as e:
@@ -2761,7 +2480,6 @@ def calculate_participation_rate(voter_id):
 
 
 def get_voter_voting_history(voter_id):
-    """Get detailed voting history for a voter"""
     try:
         votes = Vote.find_all(
             {"voter_id": voter_id, "is_verified": True}, sort=[("vote_timestamp", -1)]
@@ -2769,9 +2487,7 @@ def get_voter_voting_history(voter_id):
 
         voting_history = []
         for vote in votes:
-            # Get election details
             election = Election.find_by_election_id(vote["election_id"])
-            # Get candidate details if available
             candidate = (
                 Candidate.find_one({"candidate_id": vote["candidate_id"]})
                 if vote.get("candidate_id")
@@ -2812,7 +2528,6 @@ def get_voter_voting_history(voter_id):
                     "face_verified": vote.get("face_verified", False),
                 }
             )
-
         return voting_history
     except Exception as e:
         logger.error(f"Error getting voting history: {str(e)}")
@@ -2820,7 +2535,6 @@ def get_voter_voting_history(voter_id):
 
 
 def get_voter_analytics(voter_id):
-    """Get analytics data for voter"""
     try:
         votes_cast = get_votes_cast_count(voter_id)
         elections_participated = get_elections_participated_count(voter_id)
@@ -2847,7 +2561,6 @@ def get_voter_analytics(voter_id):
 
 
 def get_election_type_breakdown(voter_id):
-    """Get election type participation breakdown"""
     try:
         pipeline = [
             {"$match": {"voter_id": voter_id, "is_verified": True}},
@@ -2862,7 +2575,6 @@ def get_election_type_breakdown(voter_id):
             {"$unwind": "$election_info"},
             {"$group": {"_id": "$election_info.election_type", "count": {"$sum": 1}}},
         ]
-
         return list(Vote.get_collection().aggregate(pipeline))
     except Exception as e:
         logger.error(f"Error getting election type breakdown: {str(e)}")
@@ -2870,22 +2582,16 @@ def get_election_type_breakdown(voter_id):
 
 
 def get_constituency_ranking(voter_id):
-    """Get voter's ranking in constituency"""
     try:
         voter = Voter.find_by_voter_id(voter_id)
         if not voter:
             return None
-
         constituency = voter.get("constituency")
         if not constituency:
             return None
 
-        # Get total voters in constituency
         total_voters = Voter.count({"constituency": constituency, "is_active": True})
-
-        # Simplified ranking logic - in real implementation, calculate based on participation
-        ranking = max(1, int(total_voters * 0.2))  # Assume top 20%
-
+        ranking = max(1, int(total_voters * 0.2))
         return {
             "rank": ranking,
             "total_voters": total_voters,
@@ -2901,10 +2607,8 @@ def get_constituency_ranking(voter_id):
 
 
 def get_voter_activity_trend(voter_id):
-    """Get voter activity trend over time"""
     try:
         six_months_ago = datetime.utcnow() - timedelta(days=180)
-
         pipeline = [
             {
                 "$match": {
@@ -2925,7 +2629,6 @@ def get_voter_activity_trend(voter_id):
             {"$sort": {"_id.year": 1, "_id.month": 1}},
             {"$limit": 6},
         ]
-
         trend_data = list(Vote.get_collection().aggregate(pipeline))
 
         formatted_trend = []
@@ -2936,7 +2639,6 @@ def get_voter_activity_trend(voter_id):
                     "votes": data["votes"],
                 }
             )
-
         return formatted_trend
     except Exception as e:
         logger.error(f"Error getting voter activity trend: {str(e)}")
@@ -2944,8 +2646,6 @@ def get_voter_activity_trend(voter_id):
 
 
 def get_recent_notifications(voter_id, limit=10):
-    """Get recent notifications for voter"""
-    # Sample notifications - in real implementation, fetch from database
     return [
         {
             "id": "1",
@@ -2969,7 +2669,6 @@ def get_recent_notifications(voter_id, limit=10):
 
 
 def get_election_statistics(voter_id):
-    """Get election statistics"""
     try:
         return {
             "total_elections": Election.count({"is_active": True}),
@@ -3001,13 +2700,11 @@ def get_election_statistics(voter_id):
 
 
 def get_election_type_counts():
-    """Get counts by election type"""
     try:
         pipeline = [
             {"$match": {"is_active": True}},
             {"$group": {"_id": "$election_type", "count": {"$sum": 1}}},
         ]
-
         return list(Election.get_collection().aggregate(pipeline))
     except Exception as e:
         logger.error(f"Error getting election type counts: {str(e)}")
@@ -3015,10 +2712,8 @@ def get_election_type_counts():
 
 
 def get_election_calendar():
-    """Get election calendar for the next 3 months"""
     try:
         three_months_later = datetime.utcnow() + timedelta(days=90)
-
         elections = Election.find_all(
             {
                 "voting_start": {"$gte": datetime.utcnow(), "$lte": three_months_later},
@@ -3026,7 +2721,6 @@ def get_election_calendar():
             },
             sort=[("voting_start", 1)],
         )
-
         calendar = []
         for election in elections:
             calendar.append(
@@ -3040,7 +2734,6 @@ def get_election_calendar():
                     "description": election.get("description"),
                 }
             )
-
         return calendar
     except Exception as e:
         logger.error(f"Error getting election calendar: {str(e)}")
@@ -3048,7 +2741,6 @@ def get_election_calendar():
 
 
 def check_voter_eligibility(voter_id, election_id):
-    """Production-ready voter eligibility check with comprehensive validation"""
     try:
         logger.info(
             f"Checking eligibility for voter {voter_id} in election {election_id}"
@@ -3057,75 +2749,49 @@ def check_voter_eligibility(voter_id, election_id):
         voter = Voter.find_by_voter_id(voter_id)
         election = Election.find_by_election_id(election_id)
 
-        if not voter:
-            logger.error(f"Voter {voter_id} not found")
+        if not voter or not election:
             return False
 
-        if not election:
-            logger.error(f"Election {election_id} not found")
-            return False
-
-        # Check if voter is active
         if not voter.get("is_active", False):
             logger.warning(f"Voter {voter_id} is not active")
             return False
 
-        # Verify required identity verifications
         required_verifications = ["email_verified", "phone_verified"]
-        missing_verifications = []
-
-        for verification in required_verifications:
-            if not voter.get(verification, False):
-                missing_verifications.append(verification)
-
+        missing_verifications = [
+            v for v in required_verifications if not voter.get(v, False)
+        ]
         if missing_verifications:
             logger.warning(
                 f"Voter {voter_id} missing verifications: {missing_verifications}"
             )
             return False
 
-        # Check constituency matching
         voter_constituency = voter.get("constituency", "General")
         election_constituency = election.get("constituency", "General")
 
-        logger.info(
-            f"Constituency check - Voter: '{voter_constituency}', Election: '{election_constituency}'"
-        )
-
-        # If election has 'General' constituency, allow all voters
         if election_constituency.lower() == "general":
-            logger.info("Election has general constituency, allowing all voters")
             constituency_match = True
         else:
             constituency_match = check_constituency_match(
                 voter_constituency, election_constituency
             )
-
             if not constituency_match:
                 logger.warning(
                     f"Voter {voter_id} constituency mismatch: '{voter_constituency}' vs '{election_constituency}'"
                 )
                 return False
 
-        # Check if voting period is active
         current_time = datetime.utcnow()
         voting_start = election.get("voting_start")
         voting_end = election.get("voting_end")
 
         if voting_start and voting_end:
-            if current_time < voting_start:
-                logger.warning(
-                    f"Voting has not started yet: {voting_start} > {current_time}"
-                )
-                return False
-            if current_time > voting_end:
-                logger.warning(f"Voting has ended: {voting_end} < {current_time}")
+            if current_time < voting_start or current_time > voting_end:
                 return False
         else:
             logger.warning("Election missing voting dates")
             return False
 
-        # Check if already voted
         if Vote.has_voted(election_id, voter_id):
             logger.warning(f"Voter {voter_id} already voted in this election")
             return False
@@ -3135,75 +2801,50 @@ def check_voter_eligibility(voter_id, election_id):
 
     except Exception as e:
         logger.error(f"Error checking voter eligibility: {str(e)}")
-        import traceback
-
-        logger.error(f"Traceback: {traceback.format_exc()}")
         return False
 
 
 def check_constituency_match(voter_constituency, election_constituency):
-    """Flexible constituency matching with multiple strategies"""
     if not voter_constituency or not election_constituency:
-        return True  # If either is empty, allow voting
+        return True
 
     voter_constituency = str(voter_constituency).lower().strip()
     election_constituency = str(election_constituency).lower().strip()
 
-    logger.info(
-        f"Matching constituencies: '{voter_constituency}' vs '{election_constituency}'"
-    )
-
-    # Strategy 1: Exact match
     if voter_constituency == election_constituency:
-        logger.info("Exact constituency match")
         return True
 
-    # Strategy 2: Contains match
     if (
         voter_constituency in election_constituency
         or election_constituency in voter_constituency
     ):
-        logger.info("Contains constituency match")
         return True
 
-    # Strategy 3: Word-based matching
     voter_words = set(voter_constituency.split())
     election_words = set(election_constituency.split())
-
     common_words = voter_words.intersection(election_words)
-    if len(common_words) >= 1:  # At least one common word
-        logger.info(f"Common words match: {common_words}")
+    if len(common_words) >= 1:
         return True
 
-    # Strategy 4: Remove common suffixes and try again
     suffixes = ["constituency", "district", "area", "region", "zone", "city", "town"]
     voter_clean = " ".join([word for word in voter_words if word not in suffixes])
     election_clean = " ".join([word for word in election_words if word not in suffixes])
-
     if voter_clean and election_clean:
-        if voter_clean == election_clean:
-            logger.info("Cleaned constituency exact match")
-            return True
-        if voter_clean in election_clean or election_clean in voter_clean:
-            logger.info("Cleaned constituency contains match")
-            return True
-
-    # Strategy 5: Check if any word from voter constituency is in election constituency
-    for voter_word in voter_words:
         if (
-            voter_word in election_constituency and len(voter_word) > 3
-        ):  # Only meaningful words
-            logger.info(
-                f"Single word match: '{voter_word}' in '{election_constituency}'"
-            )
+            voter_clean == election_clean
+            or voter_clean in election_clean
+            or election_clean in voter_clean
+        ):
             return True
 
-    logger.info("No constituency match found")
+    for voter_word in voter_words:
+        if voter_word in election_constituency and len(voter_word) > 3:
+            return True
+
     return False
 
 
 def get_active_elections_count():
-    """Get count of active elections"""
     try:
         return Election.count(
             {
@@ -3219,7 +2860,6 @@ def get_active_elections_count():
 
 
 def get_today_votes_count():
-    """Get votes cast today"""
     try:
         today_start = datetime.utcnow().replace(
             hour=0, minute=0, second=0, microsecond=0
@@ -3233,7 +2873,6 @@ def get_today_votes_count():
 
 
 def get_active_users_count():
-    """Get count of active users in last 24 hours"""
     try:
         day_ago = datetime.utcnow() - timedelta(hours=24)
         return Voter.count({"last_login": {"$gte": day_ago}, "is_active": True})
@@ -3243,14 +2882,11 @@ def get_active_users_count():
 
 
 def calculate_system_turnout():
-    """Calculate system-wide voter turnout"""
     try:
         total_voters = Voter.count({"is_active": True})
         total_votes = Vote.count({"is_verified": True})
-
         if total_voters == 0:
             return 0
-
         return round((total_votes / total_voters) * 100, 1)
     except Exception as e:
         logger.error(f"Error calculating system turnout: {str(e)}")
@@ -3258,7 +2894,6 @@ def calculate_system_turnout():
 
 
 def can_vote(voter):
-    """Check if voter can vote in general"""
     return all(
         [
             voter.get("is_active", True),
@@ -3269,13 +2904,9 @@ def can_vote(voter):
     )
 
 
-# ============ KEEP ALL YOUR EXISTING ROUTES ============
-
-
 @dashboard_bp.route("/security-settings", methods=["GET", "POST"])
 @cross_origin()
 def security_settings():
-    """Get or update security settings"""
     try:
         voter = get_authenticated_voter()
         if not voter:
@@ -3285,22 +2916,18 @@ def security_settings():
             )
 
         if request.method == "GET":
-            # Return current security settings
             security_data = {
                 "two_factor_enabled": voter.get("two_factor_enabled", False),
                 "login_alerts": voter.get("login_alerts", True),
-                "session_timeout": voter.get("session_timeout", 30),  # minutes
+                "session_timeout": voter.get("session_timeout", 30),
                 "password_last_changed": voter.get("last_password_change"),
                 "active_sessions": get_active_sessions(voter["voter_id"]),
                 "trusted_devices": get_trusted_devices(voter["voter_id"]),
             }
-
             return jsonify({"success": True, "security_settings": security_data})
 
         elif request.method == "POST":
-            # Update security settings
             data = request.get_json()
-
             updates = {}
             if "two_factor_enabled" in data:
                 updates["two_factor_enabled"] = data["two_factor_enabled"]
@@ -3311,7 +2938,6 @@ def security_settings():
 
             if updates:
                 Voter.update_one({"voter_id": voter["voter_id"]}, {"$set": updates})
-
                 AuditLog.create_log(
                     action="security_settings_updated",
                     user_id=voter["voter_id"],
@@ -3320,7 +2946,6 @@ def security_settings():
                     ip_address=request.remote_addr,
                     user_agent=request.headers.get("User-Agent"),
                 )
-
             return jsonify(
                 {"success": True, "message": "Security settings updated successfully"}
             )
@@ -3335,25 +2960,14 @@ def security_settings():
         )
 
 
-# Add these endpoints to your dashboard.py
-
-# Add these imports at the top if not present
-
-# Add these new endpoints to dashboard.py:
-
-
 @dashboard_bp.route("/security/devices/trusted", methods=["GET"])
 @cross_origin()
 @voter_required
 def get_trusted_devices_endpoint():
-    """Get trusted devices for voter"""
     try:
         voter = request.voter
-
-        # Get devices from audit logs (last 30 days)
         month_ago = datetime.utcnow() - timedelta(days=30)
 
-        # Aggregate device information from audit logs
         pipeline = [
             {
                 "$match": {
@@ -3534,7 +3148,6 @@ def get_trusted_devices_endpoint():
         ]
 
         devices = list(AuditLog.get_collection().aggregate(pipeline))
-
         return jsonify(
             {"success": True, "devices": devices, "total_devices": len(devices)}
         )
@@ -3551,7 +3164,6 @@ def get_trusted_devices_endpoint():
 @cross_origin()
 @voter_required
 def revoke_device_endpoint():
-    """Revoke a trusted device"""
     try:
         voter = request.voter
         data = request.get_json()
@@ -3560,9 +3172,6 @@ def revoke_device_endpoint():
             return jsonify({"success": False, "message": "Device ID is required"}), 400
 
         device_id = data["device_id"]
-
-        # In a real implementation, you would store device information
-        # and mark it as revoked. For now, we'll log the action.
 
         AuditLog.create_log(
             action="device_revoked",
@@ -3590,31 +3199,25 @@ def revoke_device_endpoint():
 @cross_origin()
 @voter_required
 def logout_all_sessions_endpoint():
-    """Logout from all active sessions"""
     try:
         voter = request.voter
 
-        # Generate a new session secret to invalidate all existing sessions
         session_secret = hashlib.sha256(
             f"{voter['voter_id']}-{datetime.utcnow().isoformat()}".encode()
         ).hexdigest()
 
-        # Store the new session secret (in real app, store in database)
         Voter.update_one(
             {"voter_id": voter["voter_id"]},
             {"$set": {"session_secret": session_secret}},
         )
 
-        # Log all active sessions as logged out
-        day_ago = datetime.utcnow() - timedelta(days=1)
         AuditLog.create_log(
             action="logout_all_sessions",
             user_id=voter["voter_id"],
             user_type="voter",
             details={
                 "action": "all_sessions_invalidated",
-                "new_session_secret": session_secret[:10]
-                + "...",  # Don't log full secret
+                "new_session_secret": session_secret[:10] + "...",
                 "sessions_logged_out": "all",
             },
             ip_address=request.remote_addr,
@@ -3641,11 +3244,9 @@ def logout_all_sessions_endpoint():
 @cross_origin()
 @voter_required
 def enable_two_factor_endpoint():
-    """Enable two-factor authentication"""
     try:
         voter = request.voter
 
-        # Check if 2FA is already enabled
         if voter.get("two_factor_enabled"):
             return (
                 jsonify(
@@ -3657,25 +3258,22 @@ def enable_two_factor_endpoint():
                 400,
             )
 
-        # Generate a secret key for TOTP (in production, use pyotp library)
         import base64
         import secrets
 
         secret = base64.b32encode(secrets.token_bytes(20)).decode("utf-8")
 
-        # Store the secret (in production, encrypt this)
         Voter.update_one(
             {"voter_id": voter["voter_id"]},
             {
                 "$set": {
                     "two_factor_secret": secret,
-                    "two_factor_enabled": False,  # Not enabled until verified
+                    "two_factor_enabled": False,
                     "two_factor_backup_codes": generate_backup_codes(),
                 }
             },
         )
 
-        # Generate QR code data for authenticator app
         qr_data = f"otpauth://totp/VoterPortal:{voter['email']}?secret={secret}&issuer=VoterPortal"
 
         AuditLog.create_log(
@@ -3718,7 +3316,6 @@ def enable_two_factor_endpoint():
 @cross_origin()
 @voter_required
 def verify_two_factor_endpoint():
-    """Verify and enable two-factor authentication"""
     try:
         voter = request.voter
         data = request.get_json()
@@ -3740,10 +3337,7 @@ def verify_two_factor_endpoint():
                 400,
             )
 
-        # In production, verify the token using pyotp.TOTP(secret).verify(token)
-        # For demo purposes, we'll accept any 6-digit token
         if len(token) == 6 and token.isdigit():
-            # Enable 2FA
             Voter.update_one(
                 {"voter_id": voter["voter_id"]},
                 {
@@ -3793,11 +3387,9 @@ def verify_two_factor_endpoint():
 @cross_origin()
 @voter_required
 def disable_two_factor_endpoint():
-    """Disable two-factor authentication"""
     try:
         voter = request.voter
 
-        # Check if 2FA is enabled
         if not voter.get("two_factor_enabled"):
             return (
                 jsonify(
@@ -3809,7 +3401,6 @@ def disable_two_factor_endpoint():
                 400,
             )
 
-        # Disable 2FA
         Voter.update_one(
             {"voter_id": voter["voter_id"]},
             {
@@ -3850,7 +3441,6 @@ def disable_two_factor_endpoint():
 
 
 def generate_backup_codes():
-    """Generate backup codes for 2FA"""
     import secrets
 
     codes = []
@@ -3870,15 +3460,12 @@ def generate_backup_codes():
 @cross_origin()
 @voter_required
 def update_profile():
-    """Update voter profile"""
     try:
         voter = request.voter
         data = request.get_json()
 
-        # Prepare update data
         update_data = {}
 
-        # Personal information
         if "full_name" in data:
             update_data["full_name"] = data["full_name"]
         if "date_of_birth" in data:
@@ -3889,8 +3476,6 @@ def update_profile():
             update_data["father_name"] = data["father_name"]
         if "mother_name" in data:
             update_data["mother_name"] = data["mother_name"]
-
-        # Address information
         if "address_line1" in data:
             update_data["address_line1"] = data["address_line1"]
         if "address_line2" in data:
@@ -3904,12 +3489,10 @@ def update_profile():
         if "pincode" in data:
             update_data["pincode"] = data["pincode"]
 
-        # Update voter record
         if update_data:
             update_data["updated_at"] = datetime.utcnow()
             Voter.update_one({"voter_id": voter["voter_id"]}, {"$set": update_data})
 
-        # Log the update
         AuditLog.create_log(
             action="profile_update",
             user_id=voter["voter_id"],
@@ -3935,14 +3518,10 @@ def update_profile():
         return jsonify({"success": False, "message": "Failed to update profile"}), 500
 
 
-# Helper functions
 def parse_user_agent_for_device_name(user_agent):
-    """Parse user agent to get device name"""
     if not user_agent:
         return "Unknown Device"
-
     user_agent_lower = user_agent.lower()
-
     if "chrome" in user_agent_lower:
         return "Chrome Browser"
     elif "firefox" in user_agent_lower:
@@ -3958,21 +3537,17 @@ def parse_user_agent_for_device_name(user_agent):
 
 
 def get_location_from_ip(ip_address):
-    """Get location from IP address (simplified)"""
-    # In production, use a geolocation service
     if ip_address.startswith("192.168.") or ip_address.startswith("10."):
         return "Local Network"
     elif ip_address.startswith("172."):
         return "Private Network"
     else:
         return "Unknown Location"
-    smart_app / frontend / src / App.css
 
 
 @dashboard_bp.route("/mobile-verification", methods=["POST"])
 @cross_origin()
 def mobile_verification():
-    """Handle mobile verification"""
     try:
         voter = get_authenticated_voter()
         if not voter:
@@ -3985,13 +3560,9 @@ def mobile_verification():
         action = data.get("action")
 
         if action == "send_otp":
-            # Send OTP to mobile
             phone = voter["phone"]
             otp_id = OTP.create_otp(phone=phone, purpose="mobile_verification")
-
-            # In production, integrate with SMS service here
             logger.info(f"OTP sent to {phone} for mobile verification")
-
             return jsonify(
                 {
                     "success": True,
@@ -4001,16 +3572,13 @@ def mobile_verification():
             )
 
         elif action == "verify_otp":
-            # Verify OTP
             otp_code = data.get("otp_code")
             phone = voter["phone"]
 
             if OTP.verify_otp(
                 phone=phone, otp_code=otp_code, purpose="mobile_verification"
             ):
-                # Update verification status
                 Voter.update_verification_status(voter["voter_id"], "phone", True)
-
                 AuditLog.create_log(
                     action="mobile_verified",
                     user_id=voter["voter_id"],
@@ -4019,7 +3587,6 @@ def mobile_verification():
                     ip_address=request.remote_addr,
                     user_agent=request.headers.get("User-Agent"),
                 )
-
                 return jsonify(
                     {"success": True, "message": "Mobile number verified successfully"}
                 )
@@ -4037,7 +3604,6 @@ def mobile_verification():
 @dashboard_bp.route("/cast-vote", methods=["POST"])
 @cross_origin()
 def cast_vote():
-    """Cast vote in election"""
     try:
         voter = get_authenticated_voter()
         if not voter:
@@ -4061,7 +3627,6 @@ def cast_vote():
                 400,
             )
 
-        # Check if voter has already voted
         if Vote.has_voted(election_id, voter["voter_id"]):
             return (
                 jsonify(
@@ -4073,7 +3638,6 @@ def cast_vote():
                 400,
             )
 
-        # Check voter eligibility
         if not check_voter_eligibility(voter["voter_id"], election_id):
             return (
                 jsonify(
@@ -4085,7 +3649,6 @@ def cast_vote():
                 400,
             )
 
-        # Create vote record
         vote_data = {
             "election_id": election_id,
             "voter_id": voter["voter_id"],
@@ -4097,11 +3660,8 @@ def cast_vote():
         }
 
         vote_id = Vote.create_vote(vote_data)
-
-        # Update candidate vote count
         Candidate.increment_vote_count(candidate_id)
 
-        # Log the vote
         AuditLog.create_log(
             action="vote_cast",
             user_id=voter["voter_id"],
@@ -4127,7 +3687,6 @@ def cast_vote():
 @dashboard_bp.route("/voting-history", methods=["GET", "OPTIONS"])
 @cross_origin()
 def get_voting_history():
-    """Get voter's voting history"""
     if request.method == "OPTIONS":
         return jsonify({"status": "ok"}), 200
 
@@ -4140,7 +3699,6 @@ def get_voting_history():
             )
 
         voting_history = get_voter_voting_history(voter["voter_id"])
-
         return jsonify({"success": True, "voting_history": voting_history})
 
     except Exception as e:
@@ -4154,7 +3712,6 @@ def get_voting_history():
 @dashboard_bp.route("/analytics", methods=["GET", "OPTIONS"])
 @cross_origin()
 def get_analytics():
-    """Get voter analytics and statistics"""
     if request.method == "OPTIONS":
         return jsonify({"status": "ok"}), 200
 
@@ -4167,7 +3724,6 @@ def get_analytics():
             )
 
         analytics_data = get_voter_analytics(voter["voter_id"])
-
         return jsonify({"success": True, "analytics_data": analytics_data})
 
     except Exception as e:
@@ -4178,7 +3734,6 @@ def get_analytics():
 @dashboard_bp.route("/notifications", methods=["GET", "OPTIONS"])
 @cross_origin()
 def get_notifications():
-    """Get user notifications"""
     if request.method == "OPTIONS":
         return jsonify({"status": "ok"}), 200
 
@@ -4192,7 +3747,6 @@ def get_notifications():
 
         limit = int(request.args.get("limit", 10))
         notifications = get_recent_notifications(voter["voter_id"], limit)
-
         return jsonify({"success": True, "notifications": notifications})
 
     except Exception as e:
@@ -4204,10 +3758,7 @@ def get_notifications():
 
 
 def get_active_sessions(voter_id):
-    """Get active sessions for voter"""
     try:
-        # This would query your session store
-        # For now, return mock data
         return [
             {
                 "device": "Chrome on Windows",
@@ -4222,10 +3773,7 @@ def get_active_sessions(voter_id):
 
 
 def get_trusted_devices(voter_id):
-    """Get trusted devices for voter"""
     try:
-        # This would query your trusted devices store
-        # For now, return mock data
         return [
             {
                 "device_id": "device_001",
@@ -4241,327 +3789,8 @@ def get_trusted_devices(voter_id):
         return []
 
 
-# Export the socketio instance for use in app.py
-def get_socketio():
-    """Get SocketIO instance - FIXED VERSION"""
-    try:
-        if hasattr(current_app, "socketio"):
-            return current_app.socketio
-        else:
-            logger.warning("SocketIO not found in current app context")
-            return None
-    except Exception as e:
-        logger.error(f"Error getting SocketIO: {str(e)}")
-        return None
-
-
-def broadcast_from_dashboard(event, data, room=None):
-    """Broadcast events from dashboard routes - FIXED VERSION"""
-    try:
-        socketio_instance = get_socketio()
-        if socketio_instance:
-            logger.info(f"Broadcasting {event} to room {room}")
-            if room:
-                socketio_instance.emit(event, data, room=room)
-            else:
-                socketio_instance.emit(event, data)
-            return True
-        else:
-            logger.warning(f"Cannot broadcast {event}: SocketIO not available")
-            return False
-    except Exception as e:
-        logger.error(f"Dashboard broadcast error: {str(e)}")
-        return False
-
-
-# Temporary
-@dashboard_bp.route("/create-test-election", methods=["POST"])
-@admin_required
-def create_test_election():
-    """Create a test election for development"""
-    try:
-        election_data = {
-            "election_id": "TEST_ELECTION_001",
-            "title": "Sample General Election 2024",
-            "description": "This is a test election for development purposes",
-            "election_type": "general",
-            "status": "active",
-            "voting_start": datetime.utcnow(),
-            "voting_end": datetime.utcnow() + timedelta(days=7),
-            "registration_start": datetime.utcnow() - timedelta(days=1),
-            "registration_end": datetime.utcnow() + timedelta(days=6),
-            "constituency": "General Constituency",
-            "is_active": True,
-            "require_face_verification": False,
-        }
-
-        election_id = Election.create_election(election_data)
-
-        # Create test candidates
-        candidates = [
-            {
-                "candidate_id": "CAND001",
-                "election_id": "TEST_ELECTION_001",
-                "full_name": "John Smith",
-                "party": "Democratic Party",
-                "biography": "Experienced leader with 10 years in public service",
-                "is_approved": True,
-                "is_active": True,
-            },
-            {
-                "candidate_id": "CAND002",
-                "election_id": "TEST_ELECTION_001",
-                "full_name": "Sarah Johnson",
-                "party": "Republican Party",
-                "biography": "Business leader and community advocate",
-                "is_approved": True,
-                "is_active": True,
-            },
-        ]
-
-        for candidate in candidates:
-            Candidate.create_candidate(candidate)
-
-        return jsonify(
-            {
-                "success": True,
-                "message": "Test election created successfully",
-                "election_id": election_id,
-            }
-        )
-
-    except Exception as e:
-        logger.error(f"Create test election error: {str(e)}")
-        return (
-            jsonify({"success": False, "message": "Failed to create test election"}),
-            500,
-        )
-
-
-def normalize_date(date_value):
-    """Normalize date value to datetime object"""
-    if not date_value:
-        return None
-
-    if isinstance(date_value, datetime):
-        return date_value
-
-    if isinstance(date_value, dict) and "$date" in date_value:
-        # MongoDB date format
-        date_str = date_value["$date"]
-        try:
-            return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-        except:
-            return None
-
-    if isinstance(date_value, str):
-        try:
-            # Try ISO format
-            return datetime.fromisoformat(date_value.replace("Z", "+00:00"))
-        except:
-            try:
-                # Try other common formats
-                return datetime.strptime(date_value, "%Y-%m-%dT%H:%M:%S")
-            except:
-                try:
-                    return datetime.strptime(date_value, "%Y-%m-%d %H:%M:%S")
-                except:
-                    try:
-                        return datetime.strptime(date_value, "%Y-%m-%d")
-                    except:
-                        return None
-
-    return None
-
-
-def calculate_consistency_score(voting_history):
-    """Calculate voting consistency score"""
-    if not voting_history or len(voting_history) < 2:
-        return 0
-
-    # Simple consistency calculation based on number of votes
-    len(voting_history)
-    years = {}
-
-    # Count votes per year
-    for vote in voting_history:
-        vote_date = vote.get("vote_timestamp")
-        if vote_date:
-            try:
-                if isinstance(vote_date, dict) and "$date" in vote_date:
-                    date_str = vote_date["$date"]
-                    year = datetime.fromisoformat(date_str.replace("Z", "+00:00")).year
-                elif isinstance(vote_date, str):
-                    year = datetime.fromisoformat(vote_date.replace("Z", "+00:00")).year
-                else:
-                    continue
-
-                years[year] = years.get(year, 0) + 1
-            except:
-                continue
-
-    if not years:
-        return 0
-
-    # Consistency is based on average votes per year
-    avg_votes_per_year = sum(years.values()) / len(years)
-    max_possible_consistency = 10  # Assuming 10 elections per year max
-
-    return min(100, (avg_votes_per_year / max_possible_consistency) * 100)
-
-
-def assess_password_strength(voter_id):
-    """Assess password strength"""
-    # In a real implementation, you would check password hashing, length, complexity, etc.
-    # For now, return a default value
-    return "Strong"
-
-
-def calculate_account_age(voter):
-    """Calculate account age in days"""
-    if not voter.get("created_at"):
-        return 0
-
-    try:
-        if isinstance(voter["created_at"], dict) and "$date" in voter["created_at"]:
-            created_date = datetime.fromisoformat(
-                voter["created_at"]["$date"].replace("Z", "+00:00")
-            )
-        elif isinstance(voter["created_at"], str):
-            created_date = datetime.fromisoformat(
-                voter["created_at"].replace("Z", "+00:00")
-            )
-        elif isinstance(voter["created_at"], datetime):
-            created_date = voter["created_at"]
-        else:
-            return 0
-
-        account_age_days = (datetime.utcnow() - created_date).days
-        return max(0, account_age_days)
-    except Exception as e:
-        logger.error(f"Error calculating account age: {str(e)}")
-        return 0
-
-
-def get_active_sessions(voter_id):
-    """Get active sessions for voter"""
-    # This would query your session store
-    # For now, return empty list
-    return []
-
-
 def get_recent_logins(voter_id):
-    """Get recent login history"""
-    # This would query your audit logs
-    # For now, return empty list
-    return []
-
-
-def check_suspicious_activities(voter_id):
-    """Check for suspicious activities"""
-    # Implementation for suspicious activity detection
-    return []
-
-
-def get_trusted_devices(voter_id):
-    """Get trusted devices for voter"""
-    # Implementation for trusted devices
-    return []
-
-
-def get_device_fingerprints(voter_id):
-    """Get device fingerprints"""
-    # Implementation for device fingerprints
-    return {}
-
-
-def analyze_location_patterns(voter_id):
-    """Analyze location patterns"""
-    # Implementation for location pattern analysis
-    return {}
-
-
-def get_data_sharing_preferences(voter_id):
-    """Get data sharing preferences"""
-    # Default preferences
-    return {
-        "share_analytics": True,
-        "share_with_researchers": False,
-        "anonymous_participation": True,
-    }
-
-
-def get_notification_preferences(voter_id):
-    """Get notification preferences"""
-    # Default preferences
-    return {
-        "email_notifications": True,
-        "sms_notifications": True,
-        "push_notifications": False,
-    }
-
-
-def get_visibility_settings(voter_id):
-    """Get visibility settings"""
-    # Default settings
-    return {
-        "profile_visibility": "private",
-        "voting_history_visibility": "anonymous",
-        "show_in_searches": False,
-    }
-
-
-def calculate_account_age(voter):
-    """Calculate account age in days"""
-    if not voter.get("created_at"):
-        return 0
-
     try:
-        if isinstance(voter["created_at"], dict) and "$date" in voter["created_at"]:
-            created_date = datetime.fromisoformat(
-                voter["created_at"]["$date"].replace("Z", "+00:00")
-            )
-        elif isinstance(voter["created_at"], str):
-            created_date = datetime.fromisoformat(
-                voter["created_at"].replace("Z", "+00:00")
-            )
-        elif isinstance(voter["created_at"], datetime):
-            created_date = voter["created_at"]
-        else:
-            return 0
-
-        account_age_days = (datetime.utcnow() - created_date).days
-        return max(0, account_age_days)
-    except Exception as e:
-        logger.error(f"Error calculating account age: {str(e)}")
-        return 0
-
-
-def get_active_sessions(voter_id):
-    """Get active sessions for voter - BASIC IMPLEMENTATION"""
-    try:
-        # This would query your session store
-        # For now, return mock data
-        return [
-            {
-                "session_id": f"session_{voter_id}_{datetime.utcnow().strftime('%Y%m%d')}",
-                "device": "Chrome on Windows",
-                "ip_address": request.remote_addr,
-                "location": "Current Location",
-                "started_at": datetime.utcnow().isoformat(),
-                "last_active": datetime.utcnow().isoformat(),
-                "is_current": True,
-            }
-        ]
-    except Exception as e:
-        logger.error(f"Error getting active sessions: {str(e)}")
-        return []
-
-
-def get_recent_logins(voter_id):
-    """Get recent login history"""
-    try:
-        # Get recent audit logs for this voter
         logs = AuditLog.find_all(
             {
                 "user_id": voter_id,
@@ -4571,7 +3800,6 @@ def get_recent_logins(voter_id):
             sort=[("timestamp", -1)],
             limit=5,
         )
-
         recent_logins = []
         for log in logs:
             recent_logins.append(
@@ -4582,7 +3810,6 @@ def get_recent_logins(voter_id):
                     "device": log.get("user_agent", "Unknown Device"),
                 }
             )
-
         return recent_logins
     except Exception as e:
         logger.error(f"Error getting recent logins: {str(e)}")
@@ -4590,9 +3817,7 @@ def get_recent_logins(voter_id):
 
 
 def check_suspicious_activities(voter_id):
-    """Check for suspicious activities - BASIC IMPLEMENTATION"""
     try:
-        # Check for multiple failed login attempts
         failed_logins = AuditLog.find_all(
             {
                 "user_id": voter_id,
@@ -4601,7 +3826,6 @@ def check_suspicious_activities(voter_id):
                 "timestamp": {"$gte": datetime.utcnow() - timedelta(hours=24)},
             }
         )
-
         suspicious_activities = []
         if len(failed_logins) > 3:
             suspicious_activities.append(
@@ -4612,7 +3836,6 @@ def check_suspicious_activities(voter_id):
                     "severity": "medium",
                 }
             )
-
         return suspicious_activities
     except Exception as e:
         logger.error(f"Error checking suspicious activities: {str(e)}")
@@ -4622,7 +3845,6 @@ def check_suspicious_activities(voter_id):
 @dashboard_bp.route("/elections/<election_id>/results", methods=["GET", "OPTIONS"])
 @cross_origin()
 def get_election_results_voter(election_id):
-    """Get election results for voter - FIXED VERSION"""
     try:
         voter = get_authenticated_voter()
         if not voter:
@@ -4631,24 +3853,17 @@ def get_election_results_voter(election_id):
                 401,
             )
 
-        # Get election
         election = Election.find_by_election_id(election_id)
         if not election:
             return jsonify({"success": False, "message": "Election not found"}), 404
 
-        # Check if election is completed or results are published
         election_status = election.get("status")
         results_published = election.get("results_published", False)
         results_visibility = election.get("results_visibility", "after_end")
 
-        # Determine if voter can view results
         can_view_results = False
         reason = ""
 
-        # Rules for viewing results:
-        # 1. If results are explicitly published, anyone can view
-        # 2. If election status is completed, anyone can view
-        # 3. If election is active and voter has voted, and results_visibility is 'live'
         if results_published:
             can_view_results = True
             reason = "Results have been published"
@@ -4656,7 +3871,6 @@ def get_election_results_voter(election_id):
             can_view_results = True
             reason = "Election has completed"
         elif election_status == "active" and results_visibility == "live":
-            # Check if voter has voted in this election
             has_voted = Vote.has_voted(election_id, voter["voter_id"])
             if has_voted:
                 can_view_results = True
@@ -4683,7 +3897,6 @@ def get_election_results_voter(election_id):
                 403,
             )
 
-        # Get results data
         results = get_election_results_data(election_id)
 
         if not results:
@@ -4692,7 +3905,6 @@ def get_election_results_voter(election_id):
                 500,
             )
 
-        # Log the access
         AuditLog.create_log(
             action="view_election_results",
             user_id=voter["voter_id"],
@@ -4737,28 +3949,22 @@ def get_election_results_voter(election_id):
 
 
 def get_election_results_data(election_id):
-    """Get election results data for both admin and voter"""
     try:
         election = Election.find_by_election_id(election_id)
         if not election:
             return None
 
-        # Get candidates for this election
         candidates = Candidate.find_all({"election_id": election_id, "is_active": True})
 
-        # Get vote results
         pipeline = [
             {"$match": {"election_id": election_id, "is_verified": True}},
             {"$group": {"_id": "$candidate_id", "total_votes": {"$sum": 1}}},
             {"$sort": {"total_votes": -1}},
         ]
-
         vote_results = list(Vote.get_collection().aggregate(pipeline))
 
-        # Calculate total votes
         total_votes = sum(result["total_votes"] for result in vote_results)
 
-        # Prepare candidate data with vote counts
         candidates_data = []
         for candidate in candidates:
             candidate_votes = next(
@@ -4769,7 +3975,6 @@ def get_election_results_data(election_id):
                 ),
                 {"total_votes": 0},
             )
-
             vote_count = candidate_votes["total_votes"]
             percentage = (
                 round((vote_count / total_votes * 100), 2) if total_votes > 0 else 0
@@ -4792,14 +3997,10 @@ def get_election_results_data(election_id):
                 }
             )
 
-        # Sort candidates by vote count
         candidates_data.sort(key=lambda x: x["vote_count"], reverse=True)
-
-        # Add rank
         for i, candidate in enumerate(candidates_data):
             candidate["rank"] = i + 1
 
-        # Get voter count for turnout calculation
         voter_count = Voter.count({"is_active": True})
         turnout = round((total_votes / voter_count * 100), 2) if voter_count > 0 else 0
 
@@ -4824,29 +4025,7 @@ def get_election_results_data(election_id):
         return None
 
 
-def get_trusted_devices(voter_id):
-    """Get trusted devices for voter"""
-    try:
-        # This would query your trusted devices store
-        # For now, return basic data
-        return [
-            {
-                "device_id": f"device_{voter_id}_1",
-                "device_name": "My Primary Device",
-                "browser": request.headers.get("User-Agent", "Unknown Browser"),
-                "os": "Unknown OS",
-                "last_used": datetime.utcnow().isoformat(),
-                "is_trusted": True,
-                "trusted_since": (datetime.utcnow() - timedelta(days=30)).isoformat(),
-            }
-        ]
-    except Exception as e:
-        logger.error(f"Error getting trusted devices: {str(e)}")
-        return []
-
-
 def get_device_fingerprints(voter_id):
-    """Get device fingerprints - BASIC IMPLEMENTATION"""
     try:
         return {
             "user_agent": request.headers.get("User-Agent", "Unknown"),
@@ -4861,7 +4040,6 @@ def get_device_fingerprints(voter_id):
 
 
 def analyze_location_patterns(voter_id):
-    """Analyze location patterns - BASIC IMPLEMENTATION"""
     try:
         return {
             "usual_locations": ["Current Location"],
@@ -4875,9 +4053,7 @@ def analyze_location_patterns(voter_id):
 
 
 def get_data_sharing_preferences(voter_id):
-    """Get data sharing preferences"""
     try:
-        # Default preferences
         return {
             "share_analytics": True,
             "share_with_researchers": False,
@@ -4891,9 +4067,7 @@ def get_data_sharing_preferences(voter_id):
 
 
 def get_notification_preferences(voter_id):
-    """Get notification preferences"""
     try:
-        # Default preferences
         return {
             "email_notifications": True,
             "sms_notifications": True,
@@ -4908,9 +4082,7 @@ def get_notification_preferences(voter_id):
 
 
 def get_visibility_settings(voter_id):
-    """Get visibility settings"""
     try:
-        # Default settings
         return {
             "profile_visibility": "private",
             "voting_history_visibility": "anonymous",
@@ -4922,21 +4094,15 @@ def get_visibility_settings(voter_id):
         return {}
 
 
-# Add these new functions to dashboard.py in the ENHANCED HELPER FUNCTIONS section
-
-
 def get_detailed_live_stats():
-    """Get detailed live statistics for the dashboard"""
     try:
         current_time = datetime.utcnow()
         today_start = current_time.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        # Real-time vote count for today
         today_votes = Vote.count(
             {"vote_timestamp": {"$gte": today_start}, "is_verified": True}
         )
 
-        # Active elections with counts
         active_elections = Election.find_all(
             {
                 "status": "active",
@@ -4946,7 +4112,6 @@ def get_detailed_live_stats():
             }
         )
 
-        # Upcoming elections
         upcoming_elections = Election.count(
             {
                 "status": "scheduled",
@@ -4955,7 +4120,6 @@ def get_detailed_live_stats():
             }
         )
 
-        # System health metrics
         total_voters = Voter.count({"is_active": True})
         total_verified_voters = Voter.count(
             {
@@ -4966,7 +4130,6 @@ def get_detailed_live_stats():
             }
         )
 
-        # Recent activities
         hour_ago = current_time - timedelta(hours=1)
         recent_votes = Vote.count({"vote_timestamp": {"$gte": hour_ago}})
         recent_logins = AuditLog.count(
@@ -5008,7 +4171,7 @@ def get_detailed_live_stats():
                         {"election_id": election.get("election_id")}
                     ),
                 }
-                for election in active_elections[:5]  # Limit to 5 for performance
+                for election in active_elections[:5]
             ],
         }
     except Exception as e:
@@ -5017,20 +4180,15 @@ def get_detailed_live_stats():
 
 
 def calculate_time_remaining(end_time):
-    """Calculate time remaining until end time"""
     if not end_time:
         return "N/A"
-
     current_time = datetime.utcnow()
     if current_time > end_time:
         return "Ended"
-
     time_diff = end_time - current_time
-
     days = time_diff.days
     hours = time_diff.seconds // 3600
     minutes = (time_diff.seconds % 3600) // 60
-
     if days > 0:
         return f"{days}d {hours}h"
     elif hours > 0:
@@ -5040,19 +4198,15 @@ def calculate_time_remaining(end_time):
 
 
 def calculate_system_uptime():
-    """Calculate system uptime (simplified for demo)"""
-    # In production, you would track this from system logs
     return "99.8%"
 
 
 def get_voter_insights(voter_id):
-    """Get personalized insights for the voter"""
     try:
         voter = Voter.find_by_voter_id(voter_id)
         if not voter:
             return {}
 
-        # Voting patterns
         votes = Vote.find_all({"voter_id": voter_id, "is_verified": True})
 
         if not votes:
@@ -5067,7 +4221,6 @@ def get_voter_insights(voter_id):
                 ],
             }
 
-        # Analyze voting patterns
         votes_by_hour = {}
         votes_by_election_type = {}
         last_vote_date = None
@@ -5077,39 +4230,29 @@ def get_voter_insights(voter_id):
             if vote_time:
                 hour = vote_time.hour
                 votes_by_hour[hour] = votes_by_hour.get(hour, 0) + 1
-
-                # Get election type
                 election = Election.find_by_election_id(vote["election_id"])
                 if election:
                     election_type = election.get("election_type", "unknown")
                     votes_by_election_type[election_type] = (
                         votes_by_election_type.get(election_type, 0) + 1
                     )
-
             if not last_vote_date or vote_time > last_vote_date:
                 last_vote_date = vote_time
 
-        # Generate insights
         insights = []
-
         if len(votes) >= 3:
             insights.append(
                 f"You've voted in {len(votes)} elections - keep up the great civic engagement!"
             )
-
-        # Most active voting hour
         if votes_by_hour:
             most_active_hour = max(votes_by_hour, key=votes_by_hour.get)
             insights.append(
                 f"Your most active voting time is around {most_active_hour}:00"
             )
-
-        # Preferred election type
         if votes_by_election_type:
             preferred_type = max(votes_by_election_type, key=votes_by_election_type.get)
             insights.append(f"You prefer {preferred_type.replace('_', ' ')} elections")
 
-        # Voting streak
         voting_streak = calculate_voting_streak_detailed(voter_id)
         if voting_streak["current_streak"] > 1:
             insights.append(
@@ -5135,12 +4278,10 @@ def get_voter_insights(voter_id):
 
 
 def calculate_voting_streak_detailed(voter_id):
-    """Calculate detailed voting streak information"""
     try:
         votes = Vote.find_all(
             {"voter_id": voter_id, "is_verified": True}, sort=[("vote_timestamp", -1)]
         )
-
         if not votes:
             return {
                 "current_streak": 0,
@@ -5149,7 +4290,6 @@ def calculate_voting_streak_detailed(voter_id):
                 "days_since_last_vote": None,
             }
 
-        # Sort votes by date
         vote_dates = []
         for vote in votes:
             vote_date = vote.get("vote_timestamp")
@@ -5164,14 +4304,12 @@ def calculate_voting_streak_detailed(voter_id):
                 "days_since_last_vote": None,
             }
 
-        # Calculate streaks
         current_streak = 1
         longest_streak = 1
         streak = 1
-
         for i in range(1, len(vote_dates)):
             date_diff = (vote_dates[i - 1] - vote_dates[i]).days
-            if date_diff <= 30:  # Consider elections within 30 days as part of streak
+            if date_diff <= 30:
                 streak += 1
                 current_streak = streak if i == 1 else current_streak
                 longest_streak = max(longest_streak, streak)
@@ -5199,13 +4337,11 @@ def calculate_voting_streak_detailed(voter_id):
 
 
 def get_security_metrics(voter_id):
-    """Get detailed security metrics for the voter"""
     try:
         voter = Voter.find_by_voter_id(voter_id)
         if not voter:
             return {}
 
-        # Get recent security events
         week_ago = datetime.utcnow() - timedelta(days=7)
         security_events = AuditLog.find_all(
             {
@@ -5225,13 +4361,9 @@ def get_security_metrics(voter_id):
             limit=10,
         )
 
-        # Calculate security score
         security_score = calculate_security_score(voter)
-
-        # Get device information
         devices = get_device_information(voter_id)
 
-        # Recent login attempts
         login_attempts = AuditLog.find_all(
             {
                 "user_id": voter_id,
@@ -5304,10 +4436,7 @@ def get_security_metrics(voter_id):
 
 
 def calculate_security_score(voter):
-    """Calculate comprehensive security score (0-100)"""
     score = 0
-
-    # Verification points (50 points total)
     if voter.get("email_verified"):
         score += 10
     if voter.get("phone_verified"):
@@ -5316,12 +4445,9 @@ def calculate_security_score(voter):
         score += 15
     if voter.get("face_verified"):
         score += 15
-
-    # Account security points (30 points total)
     if voter.get("two_factor_enabled"):
         score += 20
 
-    # Account age and activity (20 points total)
     account_age_days = calculate_account_age_days(voter)
     if account_age_days > 365:
         score += 10
@@ -5332,7 +4458,6 @@ def calculate_security_score(voter):
     elif account_age_days > 7:
         score += 3
 
-    # Recent activity bonus
     if voter.get("last_login"):
         days_since_login = (datetime.utcnow() - voter["last_login"]).days
         if days_since_login <= 7:
@@ -5344,11 +4469,9 @@ def calculate_security_score(voter):
 
 
 def calculate_account_age_days(voter):
-    """Calculate account age in days"""
     created_at = voter.get("created_at")
     if not created_at:
         return 0
-
     if isinstance(created_at, dict) and "$date" in created_at:
         created_date = datetime.fromisoformat(
             created_at["$date"].replace("Z", "+00:00")
@@ -5359,15 +4482,12 @@ def calculate_account_age_days(voter):
         created_date = created_at
     else:
         return 0
-
     return (datetime.utcnow() - created_date).days
 
 
 def get_device_information(voter_id):
-    """Get device information from audit logs"""
     try:
         month_ago = datetime.utcnow() - timedelta(days=30)
-
         device_logs = AuditLog.aggregate(
             [
                 {
@@ -5392,14 +4512,11 @@ def get_device_information(voter_id):
                 {"$sort": {"last_login": -1}},
             ]
         )
-
         devices = list(device_logs)
 
-        # Categorize devices
         trusted_devices = []
         recent_devices = []
-
-        for device in devices[:5]:  # Limit to 5 most recent
+        for device in devices[:5]:
             device_info = {
                 "user_agent": device["_id"]["user_agent"],
                 "ip_address": device["_id"]["ip_address"],
@@ -5407,7 +4524,6 @@ def get_device_information(voter_id):
                 "login_count": device["login_count"],
                 "device_type": parse_user_agent(device["_id"]["user_agent"]),
             }
-
             if device["login_count"] >= 3:
                 trusted_devices.append(device_info)
             else:
@@ -5424,12 +4540,9 @@ def get_device_information(voter_id):
 
 
 def parse_user_agent(user_agent):
-    """Parse user agent string to get device type"""
     if not user_agent:
         return "Unknown"
-
     user_agent_lower = user_agent.lower()
-
     if (
         "mobile" in user_agent_lower
         or "android" in user_agent_lower
@@ -5449,10 +4562,7 @@ def parse_user_agent(user_agent):
 
 
 def check_unusual_activity(voter_id, devices):
-    """Check for unusual login activity"""
     unusual_activities = []
-
-    # Check for logins from new locations
     recent_devices = devices.get("recent", [])
     if len(recent_devices) > 2:
         unusual_activities.append(
@@ -5463,9 +4573,8 @@ def check_unusual_activity(voter_id, devices):
             }
         )
 
-    # Check time patterns (simplified)
     current_hour = datetime.utcnow().hour
-    if current_hour < 5 or current_hour > 22:  # Unusual hours for most users
+    if current_hour < 5 or current_hour > 22:
         unusual_activities.append(
             {
                 "type": "unusual_time",
@@ -5478,9 +4587,7 @@ def check_unusual_activity(voter_id, devices):
 
 
 def generate_security_recommendations(voter, security_score):
-    """Generate security recommendations based on current status"""
     recommendations = []
-
     if not voter.get("two_factor_enabled"):
         recommendations.append(
             {
@@ -5490,7 +4597,6 @@ def generate_security_recommendations(voter, security_score):
                 "icon": "shield-check",
             }
         )
-
     if not voter.get("email_verified"):
         recommendations.append(
             {
@@ -5500,7 +4606,6 @@ def generate_security_recommendations(voter, security_score):
                 "icon": "envelope-check",
             }
         )
-
     if not voter.get("phone_verified"):
         recommendations.append(
             {
@@ -5510,7 +4615,6 @@ def generate_security_recommendations(voter, security_score):
                 "icon": "phone-check",
             }
         )
-
     if not voter.get("face_verified"):
         recommendations.append(
             {
@@ -5520,7 +4624,6 @@ def generate_security_recommendations(voter, security_score):
                 "icon": "face-id",
             }
         )
-
     if security_score < 70:
         recommendations.append(
             {
@@ -5531,7 +4634,6 @@ def generate_security_recommendations(voter, security_score):
             }
         )
 
-    # Add general recommendations
     account_age = calculate_account_age_days(voter)
     if account_age > 90:
         recommendations.append(
@@ -5546,26 +4648,17 @@ def generate_security_recommendations(voter, security_score):
     return recommendations
 
 
-# Add new routes for enhanced dashboard features
 @dashboard_bp.route("/enhanced-overview-data", methods=["GET"])
 @cross_origin()
 @voter_required
 def get_enhanced_overview_data():
-    """Get enhanced overview data with real-time stats and insights"""
     try:
         voter = request.voter
 
-        # Get all the enhanced data
         live_stats_data = get_detailed_live_stats()
         voter_insights = get_voter_insights(voter["voter_id"])
-
-        # Get upcoming elections
         upcoming_elections = get_upcoming_elections(voter, limit=3)
-
-        # Get notifications
         notifications = get_recent_notifications(voter["voter_id"], limit=5)
-
-        # Get quick actions
         quick_actions = generate_quick_actions(voter)
 
         return jsonify(
@@ -5599,11 +4692,9 @@ def get_enhanced_overview_data():
 @cross_origin()
 @voter_required
 def get_security_metrics_route():
-    """Get detailed security metrics"""
     try:
         voter = request.voter
         security_data = get_security_metrics(voter["voter_id"])
-
         return jsonify({"success": True, "security_metrics": security_data})
 
     except Exception as e:
@@ -5615,10 +4706,8 @@ def get_security_metrics_route():
 
 
 def generate_quick_actions(voter):
-    """Generate quick actions based on voter status"""
     actions = []
 
-    # Check if voter can vote in any active election
     active_elections = get_active_elections(voter)
     if active_elections:
         eligible_elections = [e for e in active_elections if e.get("can_vote", False)]
@@ -5635,7 +4724,6 @@ def generate_quick_actions(voter):
                 }
             )
 
-    # Check profile completion
     completion = calculate_profile_completion(voter)
     if completion < 100:
         actions.append(
@@ -5650,7 +4738,6 @@ def generate_quick_actions(voter):
             }
         )
 
-    # Check verification status
     verification_status = get_verification_status(voter)
     if verification_status != "Fully Verified":
         actions.append(
@@ -5665,7 +4752,6 @@ def generate_quick_actions(voter):
             }
         )
 
-    # Check for digital ID
     actions.append(
         {
             "id": "digital_id",
@@ -5682,9 +4768,8 @@ def generate_quick_actions(voter):
     return actions
 
 
-# Update the get_enhanced_dashboard_data function
+# Final version of get_enhanced_dashboard_data (only one definition)
 def get_enhanced_dashboard_data(voter):
-    """Get enhanced dashboard data with real-time features"""
     return {
         "voter_info": get_enhanced_voter_info(voter),
         "election_info": get_enhanced_election_info(voter),
@@ -5698,54 +4783,79 @@ def get_enhanced_dashboard_data(voter):
             "total_votes_today": get_today_votes_count(),
             "connected_users": get_connected_users_count(),
         },
-        # Add new data
         "live_stats": get_detailed_live_stats()["live_stats"],
         "voter_insights": get_voter_insights(voter["voter_id"]),
         "security_status": get_security_metrics(voter["voter_id"]),
     }
 
 
-# In dashboard.py, add this endpoint:
-@dashboard_bp.route("/create-test-data", methods=["POST"])
-@cross_origin()
-@admin_required
-def create_test_data():
-    """Create test data for development"""
+def get_socketio():
     try:
-        # Create test election
+        if hasattr(current_app, "socketio"):
+            return current_app.socketio
+        else:
+            logger.warning("SocketIO not found in current app context")
+            return None
+    except Exception as e:
+        logger.error(f"Error getting SocketIO: {str(e)}")
+        return None
+
+
+def broadcast_from_dashboard(event, data, room=None):
+    try:
+        socketio_instance = get_socketio()
+        if socketio_instance:
+            logger.info(f"Broadcasting {event} to room {room}")
+            if room:
+                socketio_instance.emit(event, data, room=room)
+            else:
+                socketio_instance.emit(event, data)
+            return True
+        else:
+            logger.warning(f"Cannot broadcast {event}: SocketIO not available")
+            return False
+    except Exception as e:
+        logger.error(f"Dashboard broadcast error: {str(e)}")
+        return False
+
+
+@dashboard_bp.route("/create-test-election", methods=["POST"])
+@admin_required
+def create_test_election():
+    try:
         election_data = {
-            "election_id": "TEST_ELECTION_" + str(int(datetime.utcnow().timestamp())),
-            "title": "Test General Election 2024",
-            "description": "Test election for development and debugging",
+            "election_id": "TEST_ELECTION_001",
+            "title": "Sample General Election 2024",
+            "description": "This is a test election for development purposes",
             "election_type": "general",
             "status": "active",
             "voting_start": datetime.utcnow(),
             "voting_end": datetime.utcnow() + timedelta(days=7),
+            "registration_start": datetime.utcnow() - timedelta(days=1),
+            "registration_end": datetime.utcnow() + timedelta(days=6),
             "constituency": "General Constituency",
             "is_active": True,
             "require_face_verification": False,
-            "results_visibility": "live",
         }
 
         election_id = Election.create_election(election_data)
 
-        # Create test candidates
         candidates = [
             {
-                "candidate_id": "CAND_TEST_001",
-                "election_id": election_data["election_id"],
-                "full_name": "Test Candidate One",
-                "party": "Test Party",
-                "biography": "Test biography",
+                "candidate_id": "CAND001",
+                "election_id": "TEST_ELECTION_001",
+                "full_name": "John Smith",
+                "party": "Democratic Party",
+                "biography": "Experienced leader with 10 years in public service",
                 "is_approved": True,
                 "is_active": True,
             },
             {
-                "candidate_id": "CAND_TEST_002",
-                "election_id": election_data["election_id"],
-                "full_name": "Test Candidate Two",
-                "party": "Another Test Party",
-                "biography": "Another test biography",
+                "candidate_id": "CAND002",
+                "election_id": "TEST_ELECTION_001",
+                "full_name": "Sarah Johnson",
+                "party": "Republican Party",
+                "biography": "Business leader and community advocate",
                 "is_approved": True,
                 "is_active": True,
             },
@@ -5757,12 +4867,102 @@ def create_test_data():
         return jsonify(
             {
                 "success": True,
-                "message": "Test data created successfully",
+                "message": "Test election created successfully",
                 "election_id": election_id,
-                "candidates_count": len(candidates),
             }
         )
 
     except Exception as e:
-        logger.error(f"Create test data error: {str(e)}")
-        return jsonify({"success": False, "message": "Failed to create test data"}), 500
+        logger.error(f"Create test election error: {str(e)}")
+        return (
+            jsonify({"success": False, "message": "Failed to create test election"}),
+            500,
+        )
+
+
+def normalize_date(date_value):
+    if not date_value:
+        return None
+
+    if isinstance(date_value, datetime):
+        return date_value
+
+    if isinstance(date_value, dict) and "$date" in date_value:
+        date_str = date_value["$date"]
+        try:
+            return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+        except Exception as e:
+            logger.warning(f"Failed to parse MongoDB date: {e}")
+            return None
+
+    if isinstance(date_value, str):
+        try:
+            return datetime.fromisoformat(date_value.replace("Z", "+00:00"))
+        except Exception:
+            try:
+                return datetime.strptime(date_value, "%Y-%m-%dT%H:%M:%S")
+            except Exception:
+                try:
+                    return datetime.strptime(date_value, "%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    try:
+                        return datetime.strptime(date_value, "%Y-%m-%d")
+                    except Exception:
+                        return None
+
+    return None
+
+
+def calculate_consistency_score(voting_history):
+    if not voting_history or len(voting_history) < 2:
+        return 0
+
+    years = {}
+    for vote in voting_history:
+        vote_date = vote.get("vote_timestamp")
+        if vote_date:
+            try:
+                if isinstance(vote_date, dict) and "$date" in vote_date:
+                    date_str = vote_date["$date"]
+                    year = datetime.fromisoformat(date_str.replace("Z", "+00:00")).year
+                elif isinstance(vote_date, str):
+                    year = datetime.fromisoformat(vote_date.replace("Z", "+00:00")).year
+                else:
+                    continue
+                years[year] = years.get(year, 0) + 1
+            except Exception as e:
+                logger.warning(f"Error parsing vote date: {e}")
+                continue
+
+    if not years:
+        return 0
+
+    avg_votes_per_year = sum(years.values()) / len(years)
+    max_possible_consistency = 10
+    return min(100, (avg_votes_per_year / max_possible_consistency) * 100)
+
+
+def assess_password_strength(voter_id):
+    return "Strong"
+
+
+def calculate_account_age(voter):
+    if not voter.get("created_at"):
+        return 0
+    try:
+        if isinstance(voter["created_at"], dict) and "$date" in voter["created_at"]:
+            created_date = datetime.fromisoformat(
+                voter["created_at"]["$date"].replace("Z", "+00:00")
+            )
+        elif isinstance(voter["created_at"], str):
+            created_date = datetime.fromisoformat(
+                voter["created_at"].replace("Z", "+00:00")
+            )
+        elif isinstance(voter["created_at"], datetime):
+            created_date = voter["created_at"]
+        else:
+            return 0
+        return max(0, (datetime.utcnow() - created_date).days)
+    except Exception as e:
+        logger.error(f"Error calculating account age: {str(e)}")
+        return 0
