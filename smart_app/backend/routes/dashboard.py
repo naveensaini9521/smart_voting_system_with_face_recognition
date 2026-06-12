@@ -24,8 +24,7 @@ dashboard_bp = Blueprint("dashboard", __name__)
 JWT_SECRET = "sUJbaMMUAKYojj0dFe94jO"
 JWT_ALGORITHM = "HS256"
 
-# This is the only definition of connected_clients
-connected_clients = {}
+# connected_clients = {}
 
 # ============ HELPER FUNCTIONS ============
 
@@ -453,25 +452,6 @@ def get_profile():
     except Exception as e:
         logger.error(f"Profile error: {str(e)}", exc_info=True)
         return jsonify({"success": False, "message": "Failed to load profile"}), 500
-
-
-###
-def get_enhanced_dashboard_data(voter):
-    """Get enhanced dashboard data with real-time features"""
-    return {
-        "voter_info": get_enhanced_voter_info(voter),
-        "election_info": get_enhanced_election_info(voter),
-        "quick_stats": get_enhanced_quick_stats(voter),
-        "notifications": get_recent_notifications(voter["voter_id"]),
-        "analytics": get_voter_analytics(voter["voter_id"]),
-        "system_status": get_system_status(),
-        "real_time_updates": {
-            "last_updated": datetime.utcnow().isoformat(),
-            "active_elections_count": get_active_elections_count(),
-            "total_votes_today": get_today_votes_count(),
-            "connected_users": get_connected_users_count(),
-        },
-    }
 
 
 @dashboard_bp.route("/socket-info", methods=["GET"])
@@ -3966,44 +3946,6 @@ def get_notifications():
         )
 
 
-def get_active_sessions(voter_id):
-    """Get active sessions for voter"""
-    try:
-        # This would query your session store
-        # For now, return mock data
-        return [
-            {
-                "device": "Chrome on Windows",
-                "ip_address": "192.168.1.100",
-                "last_active": (datetime.utcnow() - timedelta(minutes=5)).isoformat(),
-                "location": "New Delhi, India",
-            }
-        ]
-    except Exception as e:
-        logger.error(f"Error getting active sessions: {str(e)}")
-        return []
-
-
-def get_trusted_devices(voter_id):
-    """Get trusted devices for voter"""
-    try:
-        # This would query your trusted devices store
-        # For now, return mock data
-        return [
-            {
-                "device_id": "device_001",
-                "device_name": "My Laptop",
-                "browser": "Chrome",
-                "os": "Windows 10",
-                "last_used": (datetime.utcnow() - timedelta(days=2)).isoformat(),
-                "is_trusted": True,
-            }
-        ]
-    except Exception as e:
-        logger.error(f"Error getting trusted devices: {str(e)}")
-        return []
-
-
 # Export the socketio instance for use in app.py
 def get_socketio():
     """Get SocketIO instance - FIXED VERSION"""
@@ -4171,92 +4113,6 @@ def calculate_consistency_score(voting_history):
     max_possible_consistency = 10  # Assuming 10 elections per year max
 
     return min(100, (avg_votes_per_year / max_possible_consistency) * 100)
-
-
-def assess_password_strength(voter_id):
-    """Assess password strength"""
-
-    return "Strong"
-
-
-def calculate_account_age(voter):
-    created_at = voter.get("created_at")
-    if not created_at:
-        return 0
-    if isinstance(created_at, dict) and "$date" in created_at:
-        created_date = datetime.fromisoformat(
-            created_at["$date"].replace("Z", "+00:00")
-        )
-    elif isinstance(created_at, str):
-        created_date = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-    elif isinstance(created_at, datetime):
-        created_date = created_at
-    else:
-        return 0
-    return (datetime.utcnow() - created_date).days
-
-
-def get_active_sessions(voter_id):
-    """Get active sessions for voter"""
-    return []
-
-
-def get_recent_logins(voter_id):
-    """Get recent login history"""
-    return []
-
-
-def check_suspicious_activities(voter_id):
-    """Check for suspicious activities"""
-    return []
-
-
-def get_trusted_devices(voter_id):
-    """Get trusted devices for voter"""
-    # Implementation for trusted devices
-    return []
-
-
-def get_device_fingerprints(voter_id):
-    """Get device fingerprints"""
-    # Implementation for device fingerprints
-    return {}
-
-
-def analyze_location_patterns(voter_id):
-    """Analyze location patterns"""
-    # Implementation for location pattern analysis
-    return {}
-
-
-def get_data_sharing_preferences(voter_id):
-    """Get data sharing preferences"""
-    # Default preferences
-    return {
-        "share_analytics": True,
-        "share_with_researchers": False,
-        "anonymous_participation": True,
-    }
-
-
-def get_notification_preferences(voter_id):
-    """Get notification preferences"""
-    # Default preferences
-    return {
-        "email_notifications": True,
-        "sms_notifications": True,
-        "push_notifications": False,
-    }
-
-
-def get_visibility_settings(voter_id):
-    """Get visibility settings"""
-    # Default settings
-    return {
-        "profile_visibility": "private",
-        "voting_history_visibility": "anonymous",
-        "show_in_searches": False,
-    }
 
 
 def calculate_account_age(voter):
