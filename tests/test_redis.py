@@ -15,9 +15,7 @@ mock_redis = MagicMock()
 sys.modules["redis"] = mock_redis
 sys.modules["smart_app.backend.routes.redis.redis"] = mock_redis
 
-from smart_app.backend.routes.redis import redis_bp
-
-# ----------------------------------------------------------------------
+from smart_app.backend.routes.redis import redis_bp  # noqa: E402
 
 
 @pytest.fixture

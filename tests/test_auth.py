@@ -22,7 +22,11 @@ sys.modules["mongo_models"] = mock_mongo_models
 sys.modules["services.face_recognition_service"] = mock_face_recognition_service
 
 # Now it's safe to import auth
-from smart_app.backend.routes.auth import auth_bp, JWT_SECRET, JWT_ALGORITHM
+from smart_app.backend.routes.auth import (
+    auth_bp,
+    JWT_SECRET,
+    JWT_ALGORITHM,
+)  # noqa: E402
 
 # ----------------------------------------------------------------------
 

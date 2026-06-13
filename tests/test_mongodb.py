@@ -15,7 +15,7 @@ mock_mongo = MagicMock()
 sys.modules["smart_app.backend.routes.mongodb.mongo"] = mock_mongo
 sys.modules["mongo_models"] = MagicMock()
 
-from smart_app.backend.routes.mongodb import mongodb_bp
+from smart_app.backend.routes.mongodb import mongodb_bp  # noqa: E402
 
 
 @pytest.fixture

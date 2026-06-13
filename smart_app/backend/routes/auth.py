@@ -188,7 +188,7 @@ def login():
                         # Try to parse as MM/DD/YYYY or DD/MM/YYYY
                         try:
                             dob = datetime.strptime(date_of_birth, "%m/%d/%Y").date()
-                        except Exception as e:
+                        except Exception:
                             dob = datetime.strptime(date_of_birth, "%d/%m/%Y").date()
                     else:
                         # Try to parse as month name format
@@ -403,12 +403,15 @@ def verify_face_hybrid():
                 action="face_verified_hybrid",
                 user_id=voter_id,
                 user_type="voter",
-                details=f"Face verified using hybrid system (confidence: {result.confidence:.4f}, method: {result.method})",
+                details=(
+                    f"Face verified using hybrid system "
+                    f"(confidence: {result.confidence:.4f}, method: {result.method})"
+                ),
                 ip_address=request.remote_addr,
             )
 
-            logger.info(f"✅ Face verification successful for voter: {voter_id}")
-            logger.info(f"✅ Token generated: {final_token[:50]}...")
+            logger.info(f"Face verification successful for voter: {voter_id}")
+            logger.info(f"Token generated: {final_token[:50]}...")
 
             response_data = {
                 "success": True,
