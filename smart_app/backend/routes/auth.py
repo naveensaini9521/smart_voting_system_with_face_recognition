@@ -134,8 +134,7 @@ def login():
                 jsonify(
                     {
                         "success": False,
-                        "message": "Your account has been deactivated. "
-                        "Please contact support.",
+                        "message": "Your account has been deactivated. Please contact support.",
                     }
                 ),
                 401,
@@ -164,8 +163,7 @@ def login():
                 jsonify(
                     {
                         "success": False,
-                        "message": f"Account verification pending: {', '.join(pending)}. "
-                        "Please complete verification first.",
+                        "message": f"Account verification pending: {', '.join(pending)}. Please complete verification first.",
                     }
                 ),
                 401,
@@ -189,7 +187,7 @@ def login():
                         # Try to parse as MM/DD/YYYY or DD/MM/YYYY
                         try:
                             dob = datetime.strptime(date_of_birth, "%m/%d/%Y").date()
-                        except Exception:
+                        except:
                             dob = datetime.strptime(date_of_birth, "%d/%m/%Y").date()
                     else:
                         # Try to parse as month name format
@@ -334,8 +332,7 @@ def verify_face_hybrid():
                 jsonify(
                     {
                         "success": False,
-                        "message": "Face biometrics not registered. "
-                        "Please complete registration first.",
+                        "message": "Face biometrics not registered. Please complete registration first.",
                     }
                 ),
                 400,
@@ -405,10 +402,7 @@ def verify_face_hybrid():
                 action="face_verified_hybrid",
                 user_id=voter_id,
                 user_type="voter",
-                details=(
-                    f"Face verified using hybrid system (confidence: {result.confidence:.4f}, "
-                    f"method: {result.method})"
-                ),
+                details=f"Face verified using hybrid system (confidence: {result.confidence:.4f}, method: {result.method})",
                 ip_address=request.remote_addr,
             )
 

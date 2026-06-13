@@ -19,6 +19,7 @@ from routes.otp import otp_bp
 from routes.register import register_bp
 from routes.stats import stats_bp
 from routes.mongodb import mongodb_bp
+from routes.redis import redis_bp
 from routes.voters import voting_bp
 from socket_events import register_socket_events
 
@@ -106,6 +107,7 @@ def create_app():
     app.register_blueprint(dashboard_bp, url_prefix="/api/dashboard")
     app.register_blueprint(election_bp, url_prefix="/api/election")
     app.register_blueprint(mongodb_bp, url_prefix="/api/mongodb")
+    app.register_blueprint(redis_bp, url_prefix="/api/redis")
     app.register_blueprint(frontend_bp)
 
     # Error handlers
