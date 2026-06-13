@@ -163,7 +163,8 @@ def login():
                 jsonify(
                     {
                         "success": False,
-                        "message": f"Account verification pending: {', '.join(pending)}. Please complete verification first.",
+                        "message": "Voter not found or account not fully verified",
+                        "requires_face_verification": False,
                     }
                 ),
                 401,
@@ -187,7 +188,7 @@ def login():
                         # Try to parse as MM/DD/YYYY or DD/MM/YYYY
                         try:
                             dob = datetime.strptime(date_of_birth, "%m/%d/%Y").date()
-                        except:
+                        except Exception as e:
                             dob = datetime.strptime(date_of_birth, "%d/%m/%Y").date()
                     else:
                         # Try to parse as month name format

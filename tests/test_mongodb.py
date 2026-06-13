@@ -1,29 +1,25 @@
-# tests/test_mongodb.py
 import sys
 import os
+import json
 from unittest.mock import MagicMock, patch
 
-# Add project root to Python path
+import pytest
+from flask import Flask
+
+# ----------------------------------------------------------------------
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, PROJECT_ROOT)
 
 # Mock the mongo module BEFORE importing any smart_app modules
 mock_mongo = MagicMock()
 sys.modules["smart_app.backend.routes.mongodb.mongo"] = mock_mongo
-# Also mock the mongo_models if needed (though not directly used here)
 sys.modules["mongo_models"] = MagicMock()
 
-import json
-import pytest
-from flask import Flask
-
-# Now it's safe to import the blueprint
 from smart_app.backend.routes.mongodb import mongodb_bp
 
 
 @pytest.fixture
 def app():
-    """Create a Flask app with the mongodb blueprint registered."""
     app = Flask(__name__)
     app.register_blueprint(mongodb_bp, url_prefix="/api/mongodb")
     app.config["TESTING"] = True
@@ -32,14 +28,11 @@ def app():
 
 @pytest.fixture
 def client(app):
-    """Create a test client."""
     return app.test_client()
 
 
 def test_mongodb_connection_success(client):
-    """Test MongoDB connection route when everything is working."""
     with patch("smart_app.backend.routes.mongodb.mongo") as mock_mongo:
-        # Configure mock
         mock_mongo.db.list_collection_names.return_value = ["users", "voters"]
         mock_mongo.db.command.return_value = {
             "collections": 2,
@@ -60,7 +53,6 @@ def test_mongodb_connection_success(client):
 
 
 def test_mongodb_connection_no_collections(client):
-    """Test when database has no collections."""
     with patch("smart_app.backend.routes.mongodb.mongo") as mock_mongo:
         mock_mongo.db.list_collection_names.return_value = []
         mock_mongo.db.command.return_value = {
@@ -80,7 +72,6 @@ def test_mongodb_connection_no_collections(client):
 
 
 def test_mongodb_connection_exception(client):
-    """Test when MongoDB connection fails (exception raised)."""
     with patch("smart_app.backend.routes.mongodb.mongo") as mock_mongo:
         mock_mongo.db.list_collection_names.side_effect = Exception(
             "Connection refused"
@@ -95,7 +86,6 @@ def test_mongodb_connection_exception(client):
 
 
 def test_mongodb_connection_missing_dbstats(client):
-    """Test when dbstats command returns incomplete data - endpoint should default missing values."""
     with patch("smart_app.backend.routes.mongodb.mongo") as mock_mongo:
         mock_mongo.db.list_collection_names.return_value = ["users"]
         mock_mongo.db.command.return_value = {
@@ -103,7 +93,7 @@ def test_mongodb_connection_missing_dbstats(client):
             "objects": 10,
             "dataSize": 0,
         }
-        mock_mongo.db.name = "test_db"  # Required by the endpoint
+        mock_mongo.db.name = "test_db"
 
         response = client.get("/api/mongodb/test-connection")
         data = json.loads(response.data)
