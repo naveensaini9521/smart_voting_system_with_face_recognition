@@ -1,16 +1,16 @@
 from datetime import datetime
 
-from extensions import mongo
 from flask import Blueprint, jsonify
+
+from smart_app.backend.extensions import mongo
 
 mongodb_bp = Blueprint("mongodb", __name__)
 
 
 @mongodb_bp.route("/test-connection")
 def test_mongodb_connection():
-    """Test MongoDB connection"""
+    """Test MongoDB connection."""
     try:
-        # Test connection by listing collections
         collections = mongo.db.list_collection_names()
         db_stats = mongo.db.command("dbstats")
 
@@ -27,10 +27,14 @@ def test_mongodb_connection():
                 },
             }
         )
+
     except Exception as e:
         return (
             jsonify(
-                {"status": "error", "message": f"MongoDB connection failed: {str(e)}"}
+                {
+                    "status": "error",
+                    "message": f"MongoDB connection failed: {e}",
+                }
             ),
             500,
         )
@@ -38,11 +42,13 @@ def test_mongodb_connection():
 
 @mongodb_bp.route("/collections")
 def list_collections():
-    """List all collections with stats"""
+    """List all collections with stats."""
     try:
         collections = []
+
         for collection_name in mongo.db.list_collection_names():
             stats = mongo.db.command("collstats", collection_name)
+
             collections.append(
                 {
                     "name": collection_name,
@@ -52,11 +58,20 @@ def list_collections():
                 }
             )
 
-        return jsonify({"status": "success", "collections": collections})
+        return jsonify(
+            {
+                "status": "success",
+                "collections": collections,
+            }
+        )
+
     except Exception as e:
         return (
             jsonify(
-                {"status": "error", "message": f"Error listing collections: {str(e)}"}
+                {
+                    "status": "error",
+                    "message": f"Error listing collections: {e}",
+                }
             ),
             500,
         )
@@ -64,20 +79,23 @@ def list_collections():
 
 @mongodb_bp.route("/create-sample-data")
 def create_sample_data():
-    """Create sample data in MongoDB collections"""
+    """Create sample data in MongoDB collections."""
     try:
-        # Sample face encoding data
+        now = datetime.utcnow()
+
         sample_face_data = {
             "user_id": 1,
             "username": "test_user",
-            "encoding_data": [0.1, 0.2, 0.3, 0.4, 0.5],  # Simplified sample data
-            "image_metadata": {"captured_at": datetime.utcnow(), "quality_score": 0.95},
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow(),
+            "encoding_data": [0.1, 0.2, 0.3, 0.4, 0.5],
+            "image_metadata": {
+                "captured_at": now,
+                "quality_score": 0.95,
+            },
+            "created_at": now,
+            "updated_at": now,
             "is_active": True,
         }
 
-        # Insert sample data
         result = mongo.db.user_face_encodings.insert_one(sample_face_data)
 
         return jsonify(
@@ -87,10 +105,14 @@ def create_sample_data():
                 "inserted_id": str(result.inserted_id),
             }
         )
+
     except Exception as e:
         return (
             jsonify(
-                {"status": "error", "message": f"Error creating sample data: {str(e)}"}
+                {
+                    "status": "error",
+                    "message": f"Error creating sample data: {e}",
+                }
             ),
             500,
         )

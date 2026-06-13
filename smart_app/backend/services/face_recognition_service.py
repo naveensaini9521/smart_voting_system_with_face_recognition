@@ -1,5 +1,3 @@
-# smart_app/backend/services/face_recognition_service.py
-
 import base64
 import io
 import logging
@@ -13,14 +11,14 @@ import cv2
 import numpy as np
 from PIL import Image
 
-# Optional libraries with graceful fallbacks
 try:
     import mediapipe as mp
 
+    _ = mp.solutions
     MEDIAPIPE_AVAILABLE = True
-except ImportError:
+except (ImportError, AttributeError):
     MEDIAPIPE_AVAILABLE = False
-    logging.warning("MediaPipe not installed. Install: pip install mediapipe")
+    logging.warning("MediaPipe not usable. Install: pip install mediapipe")
 
 try:
     import dlib
@@ -40,19 +38,13 @@ except ImportError:
         "face_recognition not installed. Install: pip install face_recognition"
     )
 
-# Import our face utilities (enhancement, alignment, etc.)
 from .face_utils import face_utils
 
 logger = logging.getLogger(__name__)
 
 
-# ----------------------------------------------------------------------
-# Data structures
-# ----------------------------------------------------------------------
 @dataclass
 class FaceRecognitionResult:
-    """Unified result structure for face verification/registration."""
-
     is_match: bool
     confidence: float
     voter_id: Optional[str] = None
@@ -64,9 +56,7 @@ class FaceRecognitionResult:
 
 @dataclass
 class DetectedFace:
-    """Internal representation of a detected face."""
-
-    bbox: Tuple[int, int, int, int]  # x, y, w, h
+    bbox: Tuple[int, int, int, int]
     confidence: float
     detection_method: str
     landmarks: Optional[Any] = None
@@ -76,25 +66,12 @@ class DetectedFace:
     all_detections: List[Dict] = field(default_factory=list)
 
 
-# ----------------------------------------------------------------------
-# MultiMethodFaceService – Detection‑only (now upgraded)
-# ----------------------------------------------------------------------
 class MultiMethodFaceService:
-    """
-    Face detection service using multiple methods (Haar, OpenCV DNN, MediaPipe, dlib).
-    Also provides preprocessing, validation, quality scoring.
-    """
-
     def __init__(self, enable_ensemble: bool = True, fast_mode: bool = False):
-        """
-        Args:
-            enable_ensemble: If True, uses all available detectors and merges results.
-            fast_mode: If True, uses only Haar cascade (fastest) and minimal preprocessing.
-        """
+        """Initialize face detection service with optional ensemble of detectors."""
         self.enable_ensemble = enable_ensemble and not fast_mode
         self.fast_mode = fast_mode
 
-        # Always load Haar cascade (fastest)
         self.face_cascade = cv2.CascadeClassifier(
             cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
         )
@@ -102,7 +79,6 @@ class MultiMethodFaceService:
             cv2.data.haarcascades + "haarcascade_eye.xml"
         )
 
-        # Optional detectors
         self.detectors = {}
         self._init_optional_detectors()
 
@@ -115,7 +91,6 @@ class MultiMethodFaceService:
         if not self.enable_ensemble:
             return
 
-        # OpenCV DNN (ResNet SSD) – requires model files
         try:
             proto = "models/deploy.prototxt"
             model = "models/res10_300x300_ssd_iter_140000.caffemodel"
@@ -130,7 +105,6 @@ class MultiMethodFaceService:
         except Exception as e:
             logger.warning(f"Failed to load OpenCV DNN: {e}")
 
-        # MediaPipe
         if MEDIAPIPE_AVAILABLE:
             try:
                 mp_face_detection = mp.solutions.face_detection
@@ -145,19 +119,17 @@ class MultiMethodFaceService:
             except Exception as e:
                 logger.warning(f"Failed to load MediaPipe: {e}")
 
-        # dlib HOG
         if DLIB_AVAILABLE:
             try:
                 self.detectors["dlib_hog"] = {
                     "model": dlib.get_frontal_face_detector(),
                     "method": "dlib_hog",
-                    "conf_thresh": 0.0,  # no confidence from HOG
+                    "conf_thresh": 0.0,
                 }
                 logger.debug("dlib HOG detector loaded")
             except Exception as e:
                 logger.warning(f"Failed to load dlib HOG: {e}")
 
-        # dlib CNN (requires model file)
         if DLIB_AVAILABLE:
             try:
                 cnn_model = "models/mmod_human_face_detector.dat"
@@ -192,7 +164,6 @@ class MultiMethodFaceService:
         """Resize and enhance contrast using face_utils if available."""
         try:
             if self.fast_mode:
-                # Only resize if too large
                 h, w = image_array.shape[:2]
                 if max(h, w) > 1000:
                     scale = 1000 / max(h, w)
@@ -201,22 +172,16 @@ class MultiMethodFaceService:
                     image_array = cv2.resize(image_array, (new_w, new_h))
                 return image_array
             else:
-                # Use full enhancement from face_utils
                 return face_utils.enhance_image(image_array)
         except Exception as e:
             logger.error(f"Preprocessing error: {str(e)}")
             return image_array
 
     def detect_faces_multi_method(self, image_array: np.ndarray) -> List[Dict]:
-        """
-        Detect faces using all enabled detectors (or just Haar).
-        Returns list of dicts with keys: method, bbox, confidence, landmarks.
-        """
+        """Detect faces using all enabled detectors (or just Haar)."""
         if self.fast_mode or not self.enable_ensemble:
-            # Use only Haar cascade
             return self._detect_haar(image_array)
         else:
-            # Run all detectors and ensemble
             all_detections = []
             for name, det_info in self.detectors.items():
                 try:
@@ -233,9 +198,7 @@ class MultiMethodFaceService:
                     all_detections.extend(dets)
                 except Exception as e:
                     logger.error(f"Error in detector {name}: {e}")
-            # Also add Haar detections for completeness
             all_detections.extend(self._detect_haar(image_array))
-            # Ensemble overlapping detections
             return self._ensemble_detections(all_detections)
 
     def _detect_haar(self, image_array: np.ndarray) -> List[Dict]:
@@ -246,7 +209,6 @@ class MultiMethodFaceService:
         )
         results = []
         for x, y, w, h in faces:
-            # Heuristic confidence based on face size
             img_area = image_array.shape[0] * image_array.shape[1]
             face_area = w * h
             conf = min(face_area / (img_area * 0.1), 0.95)
@@ -261,6 +223,7 @@ class MultiMethodFaceService:
         return results
 
     def _detect_opencv_dnn(self, image: np.ndarray, det_info: Dict) -> List[Dict]:
+        """OpenCV DNN detection using ResNet SSD."""
         net = det_info["model"]
         h, w = image.shape[:2]
         blob = cv2.dnn.blobFromImage(image, 1.0, (300, 300), (104.0, 177.0, 123.0))
@@ -284,6 +247,7 @@ class MultiMethodFaceService:
         return faces
 
     def _detect_mediapipe(self, image: np.ndarray, det_info: Dict) -> List[Dict]:
+        """MediaPipe face detection."""
         mp_detection = det_info["model"]
         rgb = cv2.cvtColor(image, cv2.COLOR_RGB2RGB)
         results = mp_detection.process(rgb)
@@ -308,6 +272,7 @@ class MultiMethodFaceService:
         return faces
 
     def _detect_dlib_hog(self, image: np.ndarray, det_info: Dict) -> List[Dict]:
+        """dlib HOG face detector."""
         detector = det_info["model"]
         gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
         rects = detector(gray, 1)
@@ -328,6 +293,7 @@ class MultiMethodFaceService:
         return faces
 
     def _detect_dlib_cnn(self, image: np.ndarray, det_info: Dict) -> List[Dict]:
+        """dlib CNN face detector."""
         detector = det_info["model"]
         rgb = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         dets = detector(rgb, 1)
@@ -363,7 +329,6 @@ class MultiMethodFaceService:
             "dlib_cnn": 0.9,
         }
 
-        # Group by IoU
         groups = []
         used = [False] * len(detections)
 
@@ -393,7 +358,6 @@ class MultiMethodFaceService:
                     used[j] = True
             groups.append(group)
 
-        # Merge each group
         merged = []
         for group in groups:
             total_weight = 0.0
@@ -469,12 +433,11 @@ class MultiMethodFaceService:
             sharpness = cv2.Laplacian(gray_face, cv2.CV_64F).var()
             sharpness_score = min(sharpness / 100, 1.0)
 
-            # Use face_utils to get alignment score (if possible)
             alignment_score = 0.5
             try:
                 aligned = face_utils.align_face(image_array, face_bbox)
                 if aligned is not None:
-                    alignment_score = 0.9  # placeholder
+                    alignment_score = 0.9
             except Exception:
                 pass
 
@@ -492,16 +455,12 @@ class MultiMethodFaceService:
     def extract_face_encoding_multi_method(
         self, image_array: np.ndarray, face_bbox: Tuple
     ) -> Dict[str, Any]:
-        """
-        Extract face encoding using the best available method (face_recognition, dlib, or None).
-        Returns dict with 'encoding' (numpy array) and 'method'.
-        """
+        """Extract face encoding using the best available method."""
         x, y, w, h = face_bbox
         face_img = image_array[y : y + h, x : x + w]
         if face_img.size == 0:
             return {"encoding": None, "method": "none"}
 
-        # Try face_recognition first (highest quality)
         if FACE_RECOGNITION_AVAILABLE:
             try:
                 rgb_face = cv2.cvtColor(face_img, cv2.COLOR_RGB2RGB)
@@ -511,16 +470,13 @@ class MultiMethodFaceService:
             except Exception as e:
                 logger.warning(f"face_recognition encoding failed: {e}")
 
-        # Fallback to dlib ResNet if available
         if DLIB_AVAILABLE:
             try:
-                # Need shape predictor and recognition model
                 sp_path = "models/shape_predictor_68_face_landmarks.dat"
                 rec_model_path = "models/dlib_face_recognition_resnet_model_v1.dat"
                 if os.path.exists(sp_path) and os.path.exists(rec_model_path):
                     sp = dlib.shape_predictor(sp_path)
                     facerec = dlib.face_recognition_model_v1(rec_model_path)
-                    # Convert bbox to dlib rectangle
                     rect = dlib.rectangle(x, y, x + w, y + h)
                     shape = sp(image_array, rect)
                     encoding = np.array(
@@ -533,21 +489,14 @@ class MultiMethodFaceService:
         return {"encoding": None, "method": "none"}
 
 
-# ----------------------------------------------------------------------
-# KNNFaceService – K‑Nearest Neighbors for face similarity
-# ----------------------------------------------------------------------
 class KNNFaceService:
-    """
-    KNN similarity service that works with any face encodings.
-    Requires pre‑computed encodings (supplied via add_face_encoding or loaded from disk).
-    """
-
     def __init__(self, model_path: str = "data/face_knn_model.pkl", k: int = 3):
+        """Initialize KNN face similarity service."""
         self.model_path = model_path
         self.k = k
         self.face_encodings: List[np.ndarray] = []
         self.voter_ids: List[str] = []
-        self.threshold = 0.65  # similarity threshold (cosine or euclidean)
+        self.threshold = 0.65
         self._load_model()
         logger.info(
             f"KNNFaceService initialized (k={k}, encodings={len(self.face_encodings)})"
@@ -639,7 +588,6 @@ class KNNFaceService:
         """Verify if query encoding matches a specific claimed voter."""
         if query_encoding is None:
             return {"verified": False, "confidence": 0.0}
-        # Find index of claimed voter
         try:
             idx = self.voter_ids.index(claimed_voter_id)
             encoding = self.face_encodings[idx]
@@ -650,6 +598,7 @@ class KNNFaceService:
             return {"verified": False, "confidence": 0.0, "error": "Voter not found"}
 
     def get_statistics(self) -> Dict:
+        """Return statistics about the KNN model."""
         return {
             "total_encodings": len(self.face_encodings),
             "unique_voters": len(set(self.voter_ids)),
@@ -659,18 +608,11 @@ class KNNFaceService:
         }
 
 
-# ----------------------------------------------------------------------
-# HybridFaceRecognitionService – Main entry point for registration/verification
-# ----------------------------------------------------------------------
 class HybridFaceRecognitionService:
-    """
-    Full hybrid service: detection + encoding + KNN matching.
-    Uses MultiMethodFaceService for detection and quality, KNNFaceService for matching.
-    """
-
     def __init__(
         self, knn_model_path: str = "data/face_knn_model.pkl", fast_mode: bool = False
     ):
+        """Full hybrid service: detection + encoding + KNN matching."""
         self.detection_service = MultiMethodFaceService(
             enable_ensemble=not fast_mode, fast_mode=fast_mode
         )
@@ -681,27 +623,18 @@ class HybridFaceRecognitionService:
     def _image_to_encoding(
         self, image_data: str
     ) -> Tuple[Optional[np.ndarray], Optional[Dict], Dict]:
-        """
-        Convert base64 image -> detect face -> extract encoding + quality info.
-        Returns (encoding, face_info, quality_details)
-        """
+        """Convert base64 image -> detect face -> extract encoding + quality info."""
         try:
-            # Convert to numpy
             img_array = self.detection_service.base64_to_image(image_data)
-            # Preprocess
             img_array = self.detection_service.preprocess_image(img_array)
-            # Detect faces
             faces = self.detection_service.detect_faces_multi_method(img_array)
             if not faces:
                 return None, None, {"error": "No face detected"}
-            # Use highest confidence face
             best_face = max(faces, key=lambda f: f["confidence"])
             bbox = best_face["bbox"]
-            # Validate and compute quality
             quality_score = self.detection_service.calculate_face_quality_score(
                 img_array, bbox
             )
-            # Extract encoding
             encoding_result = self.detection_service.extract_face_encoding_multi_method(
                 img_array, bbox
             )
@@ -728,10 +661,7 @@ class HybridFaceRecognitionService:
             return None, None, {"error": str(e)}
 
     def register_face(self, voter_id: str, image_data: str) -> FaceRecognitionResult:
-        """
-        Register a new face for a voter.
-        Returns FaceRecognitionResult indicating success/failure.
-        """
+        """Register a new face for a voter."""
         start_time = time.time()
         try:
             encoding, face_info, quality_info = self._image_to_encoding(image_data)
@@ -746,7 +676,6 @@ class HybridFaceRecognitionService:
                     },
                     quality_score=quality_info.get("quality", 0.0),
                 )
-            # Add to KNN
             success = self.knn_service.add_face_encoding(encoding, voter_id)
             if success:
                 return FaceRecognitionResult(
@@ -779,9 +708,7 @@ class HybridFaceRecognitionService:
             )
 
     def verify_face(self, voter_id: str, image_data: str) -> FaceRecognitionResult:
-        """
-        Verify if the provided image matches the stored face for voter_id.
-        """
+        """Verify if the provided image matches the stored face for voter_id."""
         start_time = time.time()
         try:
             encoding, face_info, quality_info = self._image_to_encoding(image_data)
@@ -848,10 +775,7 @@ class HybridFaceRecognitionService:
         return stats
 
     def reindex_knn_from_database(self, face_encodings_data: List[Dict]) -> int:
-        """
-        Bulk load face encodings from database (list of {voter_id, encoding}).
-        Returns number of added entries.
-        """
+        """Bulk load face encodings from database (list of {voter_id, encoding})."""
         count = 0
         for entry in face_encodings_data:
             voter_id = entry.get("voter_id")
@@ -862,10 +786,7 @@ class HybridFaceRecognitionService:
         return count
 
 
-# ----------------------------------------------------------------------
-# Global instances (backward‑compatible with your existing code)
-# ----------------------------------------------------------------------
-multi_face_service = MultiMethodFaceService()  # detection only
-knn_face_service = KNNFaceService()  # KNN matcher (requires external encodings)
-hybrid_face_service = HybridFaceRecognitionService()  # full hybrid service
-face_service = multi_face_service  # alias for detection
+multi_face_service = MultiMethodFaceService()
+knn_face_service = KNNFaceService()
+hybrid_face_service = HybridFaceRecognitionService()
+face_service = multi_face_service

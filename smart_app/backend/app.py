@@ -18,7 +18,7 @@ from routes.home import home_bp
 from routes.otp import otp_bp
 from routes.register import register_bp
 from routes.stats import stats_bp
-from routes.test_mongodb import mongodb_bp
+from routes.mongodb import mongodb_bp
 from routes.voters import voting_bp
 from socket_events import register_socket_events
 

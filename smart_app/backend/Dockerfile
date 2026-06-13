@@ -18,11 +18,11 @@ RUN pip install --no-cache-dir -U uv
 
 COPY requirements.txt .
 
+RUN uv venv /opt/venv
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install \
-    --system \
-    --break-system-packages \
-    -r requirements.txt
+    . /opt/venv/bin/activate && \
+    uv pip install -r requirements.txt
+
 
 
 # STAGE 2: Runtime

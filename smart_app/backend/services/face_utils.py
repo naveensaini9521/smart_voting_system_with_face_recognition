@@ -1,4 +1,3 @@
-# smart_app/backend/services/face_utils.py
 import base64
 import logging
 from typing import Dict, List, Optional, Tuple
@@ -6,12 +5,12 @@ from typing import Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 
-# Optional advanced libraries (graceful fallback)
 try:
     import mediapipe as mp
 
+    _ = mp.solutions
     MEDIAPIPE_AVAILABLE = True
-except ImportError:
+except (ImportError, AttributeError):
     MEDIAPIPE_AVAILABLE = False
 
 try:
@@ -31,12 +30,11 @@ class FaceUtils:
     """
 
     def __init__(self):
-        # Always available: OpenCV cascades
+        """Initialize cascades and optional backends."""
         self.eye_cascade = cv2.CascadeClassifier(
             cv2.data.haarcascades + "haarcascade_eye.xml"
         )
 
-        # Optional MediaPipe Face Detection & Face Mesh
         self.mp_face_detection = None
         self.mp_face_mesh = None
         if MEDIAPIPE_AVAILABLE:
@@ -53,11 +51,9 @@ class FaceUtils:
             except Exception as e:
                 logger.warning(f"Failed to init MediaPipe: {e}")
 
-        # Optional dlib landmark predictor
         self.dlib_predictor = None
         if DLIB_AVAILABLE:
             try:
-                # Path to 68-point landmark predictor (you need to download)
                 predictor_path = "models/shape_predictor_68_face_landmarks.dat"
                 self.dlib_predictor = dlib.shape_predictor(predictor_path)
                 logger.info("dlib landmark predictor loaded")
@@ -66,9 +62,6 @@ class FaceUtils:
 
         logger.info("FaceUtils initialized (enhanced)")
 
-    # ------------------------------------------------------------------
-    # Drawing & visualization
-    # ------------------------------------------------------------------
     def draw_face_annotations(
         self, image_array: np.ndarray, faces: List[Dict]
     ) -> np.ndarray:
@@ -101,19 +94,16 @@ class FaceUtils:
     def _get_color_for_method(self, method: str) -> Tuple[int, int, int]:
         """Return BGR color for different detection/recognition methods."""
         colors = {
-            # Detection methods
-            "haar_cascade": (255, 0, 0),  # Blue
-            "opencv_dnn": (0, 255, 0),  # Green
-            "mediapipe": (0, 255, 255),  # Yellow
-            "dlib_hog": (0, 165, 255),  # Orange
-            "dlib_cnn": (255, 0, 255),  # Magenta
-            "ensemble": (255, 255, 0),  # Cyan
-            # Recognition / other
+            "haar_cascade": (255, 0, 0),
+            "opencv_dnn": (0, 255, 0),
+            "mediapipe": (0, 255, 255),
+            "dlib_hog": (0, 165, 255),
+            "dlib_cnn": (255, 0, 255),
+            "ensemble": (255, 255, 0),
             "face_recognition": (255, 255, 0),
             "dlib_resnet": (0, 255, 255),
             "knn": (128, 0, 128),
             "lbph": (255, 128, 0),
-            # Legacy
             "opencv": (255, 0, 0),
             "dlib": (0, 0, 255),
             "unknown": (128, 128, 128),
@@ -125,7 +115,7 @@ class FaceUtils:
         try:
             if len(image_array.shape) == 3:
                 lab = cv2.cvtColor(image_array, cv2.COLOR_RGB2LAB)
-                lightness_channel, a, b = cv2.split(lab)  # renamed from 'l'
+                lightness_channel, a, b = cv2.split(lab)
                 clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
                 lightness_channel = clahe.apply(lightness_channel)
                 lab = cv2.merge([lightness_channel, a, b])
@@ -142,7 +132,6 @@ class FaceUtils:
             logger.error(f"Image enhancement error: {str(e)}")
             return image_array
 
-    # Eye detection & face alignment (improved with optional backends)
     def align_face(
         self, image_array: np.ndarray, face_bbox: Tuple
     ) -> Optional[np.ndarray]:
@@ -156,10 +145,8 @@ class FaceUtils:
             if face_region.size == 0:
                 return None
 
-            # Try advanced eye detection first
             eyes = self._detect_eyes_advanced(image_array, face_bbox)
             if len(eyes) < 2:
-                # Fallback to OpenCV eye detection on face region
                 gray_face = cv2.cvtColor(face_region, cv2.COLOR_RGB2GRAY)
                 eyes = self._detect_eyes_haar(gray_face)
 
@@ -188,7 +175,6 @@ class FaceUtils:
         x, y, w, h = face_bbox
         face_roi = image[y : y + h, x : x + w]
 
-        # 1) Try MediaPipe Face Mesh (best)
         if self.mp_face_mesh is not None:
             try:
                 rgb = cv2.cvtColor(face_roi, cv2.COLOR_RGB2RGB)
@@ -196,7 +182,6 @@ class FaceUtils:
                 if results.multi_face_landmarks:
                     landmarks = results.multi_face_landmarks[0]
                     h_f, w_f = face_roi.shape[:2]
-                    # Left eye indices: 33, 133 (approx center)
                     left_eye = landmarks.landmark[33]
                     right_eye = landmarks.landmark[133]
                     left_x = int(left_eye.x * w_f) + x
@@ -209,13 +194,11 @@ class FaceUtils:
             except Exception as e:
                 logger.debug(f"MediaPipe eye detection failed: {e}")
 
-        # 2) Try dlib landmarks
         if self.dlib_predictor is not None and DLIB_AVAILABLE:
             try:
                 gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
                 rect = dlib.rectangle(x, y, x + w, y + h)
                 shape = self.dlib_predictor(gray, rect)
-                # Left eye: points 36-41, take average or use 37,40
                 left_eye_x = (shape.part(36).x + shape.part(39).x) // 2
                 left_eye_y = (shape.part(36).y + shape.part(39).y) // 2
                 right_eye_x = (shape.part(42).x + shape.part(45).x) // 2
@@ -250,7 +233,6 @@ class FaceUtils:
         Returns dict with 'points' (list of (x,y)) and 'method'.
         Returns None if no backend available.
         """
-        # Try MediaPipe Face Mesh first (more points)
         if self.mp_face_mesh is not None:
             try:
                 rgb = cv2.cvtColor(image_array, cv2.COLOR_RGB2RGB)
@@ -299,7 +281,6 @@ class FaceUtils:
             logger.error(f"Blur score calculation error: {str(e)}")
             return 0.0
 
-    # Thumbnail creation (using improved alignment)
     def create_face_thumbnail(
         self,
         image_array: np.ndarray,
@@ -313,15 +294,12 @@ class FaceUtils:
             if face_region.size == 0:
                 return None
 
-            # Try to align the face using the enhanced align_face method
             aligned_face = self.align_face(image_array, face_bbox)
             if aligned_face is not None:
                 face_region = aligned_face
 
-            # Resize
             thumbnail = cv2.resize(face_region, size, interpolation=cv2.INTER_AREA)
 
-            # Convert to base64
             _, buffer = cv2.imencode(".jpg", thumbnail)
             thumbnail_base64 = base64.b64encode(buffer).decode("utf-8")
 
@@ -350,16 +328,14 @@ class FaceUtils:
                 left_eye = points[33]
                 right_eye = points[133]
                 nose = points[1]
-            else:  # dlib 68-point
+            else:
                 left_eye = points[36]
                 right_eye = points[45]
                 nose = points[30]
 
-            # Calculate yaw from eye difference
             dx = right_eye[0] - left_eye[0]
             dy = right_eye[1] - left_eye[1]
             roll = np.degrees(np.arctan2(dy, dx))
-            # Pitch from nose to eye line
             eye_center = (
                 (left_eye[0] + right_eye[0]) // 2,
                 (left_eye[1] + right_eye[1]) // 2,
