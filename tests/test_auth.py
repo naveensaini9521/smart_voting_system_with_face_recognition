@@ -21,7 +21,11 @@ mock_face_recognition_service = MagicMock()
 sys.modules["mongo_models"] = mock_mongo_models
 sys.modules["services.face_recognition_service"] = mock_face_recognition_service
 
-from smart_app.backend.routes.auth import auth_bp, JWT_SECRET, JWT_ALGORITHM  # noqa: E402
+from smart_app.backend.routes.auth import (
+    auth_bp,
+    JWT_SECRET,
+    JWT_ALGORITHM,
+)  # noqa: E402
 
 
 @pytest.fixture
