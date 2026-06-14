@@ -1,5 +1,13 @@
+version: "3.9"
+
+x-backend-image: &backend-image
+  image: naveen9521/smart-voting-backend:latest
+  build:
+    context: ./smart_app/backend
+
 services:
   frontend:
+    image: naveen9521/smart-voting-frontend:latest
     build:
       context: ./smart_app/frontend
       dockerfile: Dockerfile
@@ -42,9 +50,7 @@ services:
     cpuset: "0-1"
 
   backend_1:
-    build:
-      context: ./smart_app/backend
-
+    <<: *backend-image
     container_name: backend_1
 
     env_file:
@@ -75,9 +81,7 @@ services:
     cpus: 1.0
 
   backend_2:
-    build:
-      context: ./smart_app/backend
-
+    <<: *backend-image
     container_name: backend_2
 
     env_file:
@@ -108,9 +112,7 @@ services:
     cpus: 1.0
 
   backend_3:
-    build:
-      context: ./smart_app/backend
-
+    <<: *backend-image
     container_name: backend_3
 
     env_file:
@@ -142,7 +144,6 @@ services:
 
   redis:
     image: redis:7-alpine
-
     container_name: voting-redis
 
     restart: unless-stopped
@@ -161,7 +162,6 @@ services:
 
   mongo:
     image: mongo:7
-
     container_name: voting-system-mongo
 
     expose:
