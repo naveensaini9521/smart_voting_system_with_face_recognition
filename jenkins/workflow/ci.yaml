@@ -31,33 +31,32 @@ pipeline {
             }
         }
 
-        stage('Black Formatting validation') {
+        stage('Black Validation') {
             steps {
                 sh '''
                 . .venv/bin/activate
-                
                 black --check .
-                
                 echo "Black formatting OK"
                 '''
             }
         }
-        
-        stage('Flake8 Linting Validation') {
+
+        stage('Flake8 Linting') {
             steps {
                 sh '''
                 . .venv/bin/activate
-                
-                flake8 . \
-                    --max-line-length=88 \
-                    --extend-ignore=E203,W503
-                    '''
+                flake8 .
+                '''
             }
         }
-        
+
         stage('Run Tests') {
             steps {
-                sh '. .venv/bin/activate && pytest -v'
+                sh '''
+                . .venv/bin/activate
+                export PYTHONPATH=$WORKSPACE
+                pytest -v
+                '''
             }
         }
 
@@ -65,34 +64,29 @@ pipeline {
             steps {
                 withSonarQubeEnv('sonarqube') {
                     sh '''
-                    sonar-scanner \
+                    /opt/sonar-scanner/bin/sonar-scanner \
                       -Dsonar.projectKey=smart-voting-system \
                       -Dsonar.projectName=smart-voting-system \
-                      -Dsonar.sources=. \
                       -Dsonar.python.version=3.11
                     '''
                 }
             }
         }
 
-        stage('Build Backend Docker Image') {
+        stage('Verify Compose File') {
             steps {
                 sh '''
-                DOCKER_BUILDKIT=1 docker build \
-                  -t ${BACKEND_IMAGE}:${BUILD_TAG} \
-                  -t ${BACKEND_IMAGE}:latest \
-                  .
+                pwd
+                ls -la
+                test -f docker-compose.yaml
                 '''
             }
         }
 
-        stage('Build Frontend Docker Image') {
+        stage('Build Images') {
             steps {
                 sh '''
-                DOCKER_BUILDKIT=1 docker build \
-                  -t ${FRONTEND_IMAGE}:${BUILD_TAG} \
-                  -t ${FRONTEND_IMAGE}:latest \
-                  ./frontend
+                docker compose build
                 '''
             }
         }
@@ -116,11 +110,7 @@ pipeline {
         stage('Push Images') {
             steps {
                 sh '''
-                docker push ${BACKEND_IMAGE}:${BUILD_TAG}
-                docker push ${BACKEND_IMAGE}:latest
-
-                docker push ${FRONTEND_IMAGE}:${BUILD_TAG}
-                docker push ${FRONTEND_IMAGE}:latest
+                docker compose push
                 '''
             }
         }
